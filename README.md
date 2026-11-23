@@ -13,7 +13,9 @@ Keine Admin-Rechte nötig. Das Skript (`installer/install.ps1`):
 2. lädt den Hub nach `Desktop\ForscherFreundeOberflaeche\hub` (nur wenn er dort noch fehlt; SHA-256-geprüft),
 3. lädt eine Java-Laufzeit (Temurin 21, SHA-256-geprüft) nach `%LOCALAPPDATA%\ForscherFreundeHub\jre`
    (nicht auf den Desktop, damit OneDrive keine Laufzeitdateien synchronisiert oder auslagert),
-4. erstellt die Verknüpfung **„ForscherFreunde Hub“** mit ForscherFreunde-Symbol auf dem Desktop und im Startmenü.
+4. lädt die Camp-Vorlagen aus den Repos **CampMinecraftMods** und **CampMinecraftAI** (jeweils Standard-Branch)
+   nach `shared\templates\<Name>` und entpackt die enthaltene `run.zip` dorthin – nur wenn die Vorlage noch fehlt,
+5. erstellt die Verknüpfung **„ForscherFreunde Hub“** mit ForscherFreunde-Symbol auf dem Desktop und im Startmenü.
 
 Es kann beliebig oft ausgeführt werden (z. B. um eine gelöschte Verknüpfung wiederherzustellen).
 
@@ -22,11 +24,13 @@ Es kann beliebig oft ausgeführt werden (z. B. um eine gelöschte Verknüpfung w
 | `ForscherFreunde-Installieren.bat -Quiet` | ohne Rückfragen, für die Verteilung auf viele Laptops |
 | `... -Start` | Hub danach direkt starten |
 | `... -UpdateApp` | vorhandene Hub-JAR durch die neueste ersetzen (sonst macht das der Auto-Updater) |
+| `... -UpdateTemplates` | Vorlagen neu von GitHub laden (bestehende Profile bleiben unverändert) |
 | `... -OfflineDir E:\FF` | ohne Internet, z. B. vom USB-Stick |
 
 **Offline / USB-Stick** (spart 130 × 45 MB Download): `install.ps1`, `ForscherFreunde-Installieren.bat`,
-`ForscherFreundeHub.jar`, `ForscherFreunde.ico` und eine Temurin-JRE als ZIP
-(`OpenJDK21U-jre_x64_windows_hotspot_*.zip` von adoptium.net) in einen Ordner legen und dort die `.bat` starten –
+`ForscherFreundeHub.jar`, `ForscherFreunde.ico`, eine Temurin-JRE als ZIP
+(`OpenJDK21U-jre_x64_windows_hotspot_*.zip` von adoptium.net) sowie die Vorlagen als `CampMinecraftMods.zip` und
+`CampMinecraftAI.zip` (auf GitHub: *Code → Download ZIP*, Datei passend umbenennen) in einen Ordner legen und dort die `.bat` starten –
 das Skript erkennt den Ordner automatisch.
 
 > Windows SmartScreen kann beim ersten Start einer heruntergeladenen `.bat` warnen („Weitere Informationen“ →

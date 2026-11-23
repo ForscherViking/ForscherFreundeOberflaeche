@@ -10,19 +10,26 @@
        Spätere Updates erledigt der Hub selbst.
     3. Lädt eine Java-Laufzeit (Eclipse Temurin 21, geprüft per SHA-256) nach
        %LOCALAPPDATA%\ForscherFreundeHub\jre – nur wenn sie noch fehlt.
-    4. Erstellt die Verknüpfung "ForscherFreunde Hub" mit ForscherFreunde-Symbol auf dem
+    4. Lädt die Camp-Vorlagen (GitHub-Repos CampMinecraftMods und CampMinecraftAI) nach
+       shared\templates und entpackt die enthaltene run.zip – nur wenn die Vorlage noch fehlt.
+    5. Erstellt die Verknüpfung "ForscherFreunde Hub" mit ForscherFreunde-Symbol auf dem
        Desktop und im Startmenü.
 
     Das Skript kann beliebig oft ausgeführt werden; vorhandene Daten werden nie überschrieben.
 
 .PARAMETER OfflineDir
     Ordner (z. B. USB-Stick) mit ForscherFreundeHub.jar, ForscherFreunde.ico und optional
-    einer Temurin-JRE als ZIP (OpenJDK21U-jre_x64_windows_*.zip). Dann wird nichts
+    einer Temurin-JRE als ZIP (OpenJDK21U-jre_x64_windows_*.zip) sowie den Vorlagen als
+    CampMinecraftMods.zip / CampMinecraftAI.zip (GitHub: Code → Download ZIP). Dann wird nichts
     heruntergeladen. Liegt install.ps1 selbst neben einer ForscherFreundeHub.jar, wird dieser
     Ordner automatisch verwendet.
 
 .PARAMETER UpdateApp
     Ersetzt eine bereits vorhandene ForscherFreundeHub.jar durch die neueste Version.
+
+.PARAMETER UpdateTemplates
+    Ersetzt vorhandene Vorlagen durch den aktuellen Stand auf GitHub. Bestehende Profile der
+    Kinder bleiben unverändert (sie sind Kopien).
 
 .PARAMETER Start
     Startet den Hub nach der Installation.
@@ -41,6 +48,7 @@ param(
     [string]$DataDir,
     [string]$Repo = 'ForscherViking/ForscherFreundeOberflaeche',
     [switch]$UpdateApp,
+    [switch]$UpdateTemplates,
     [switch]$Start,
     [switch]$Quiet
 )
@@ -55,6 +63,14 @@ $IconName     = 'ForscherFreunde.ico'
 $JavaFeature  = 21
 $JvmOptions   = '-XX:+UseSerialGC -Xms24m -Xmx192m -XX:TieredStopAtLevel=1 -Xss512k'
 $ReleaseBase  = "https://github.com/$Repo/releases/latest/download"
+
+# Camp-Vorlagen: Ordnername in shared\templates (= Camp-ID im Hub) und GitHub-Repo.
+# Geladen wird jeweils der Standard-Branch des Repos.
+$Templates = @(
+    @{ Name = 'CampMinecraftMods'; Repo = 'ForscherViking/CampMinecraftMods' },
+    @{ Name = 'CampMinecraftAI';   Repo = 'ForscherViking/CampMinecraftAI' }
+)
+$script:Problems = @()
 
 function Write-Step([string]$Text) { Write-Host ''; Write-Host "==> $Text" -ForegroundColor Cyan }
 function Write-Ok([string]$Text)   { Write-Host "    $Text" -ForegroundColor Green }
@@ -84,6 +100,58 @@ function Assert-Sha256([string]$File, [string]$Expected) {
     if ($actual -ine $Expected.Trim()) {
         Remove-Item -LiteralPath $File -Force -ErrorAction SilentlyContinue
         throw "Prüfsumme stimmt nicht für $(Split-Path $File -Leaf) – Download beschädigt oder manipuliert."
+    }
+}
+
+function Install-Template($Template, [string]$TemplatesDir) {
+    $name = $Template.Name
+    $target = Join-Path $TemplatesDir $name
+    if ((Test-Path -LiteralPath $target) -and -not $UpdateTemplates) {
+        Write-Info "vorhanden: $name"
+        return
+    }
+    # Im selben Ordner entpacken, damit das abschließende Verschieben nur ein Umbenennen ist.
+    $staging = Join-Path $TemplatesDir (".download-" + [Guid]::NewGuid().ToString('N'))
+    $tmpZip = $null
+    try {
+        $zip = $null
+        if ($OfflineDir -and (Test-Path -LiteralPath (Join-Path $OfflineDir "$name.zip"))) {
+            $zip = Join-Path $OfflineDir "$name.zip"
+            Write-Info "$name aus $zip …"
+        } else {
+            $tmpZip = New-TempFile '.zip'
+            Write-Info "lade $name von GitHub …"
+            Get-Download "https://github.com/$($Template.Repo)/archive/HEAD.zip" $tmpZip
+            $zip = $tmpZip
+        }
+        Expand-Archive -LiteralPath $zip -DestinationPath $staging -Force
+        # GitHub-ZIPs enthalten einen Oberordner wie "CampMinecraftMods-master".
+        $inner = Get-ChildItem -LiteralPath $staging -Directory | Select-Object -First 1
+        if (-not $inner -or -not (Test-Path -LiteralPath (Join-Path $inner.FullName 'build.gradle'))) {
+            throw "Unerwarteter Inhalt im Archiv von $name."
+        }
+        # Laut README: run.zip ins Arbeitsverzeichnis entpacken (Minecraft-Startumgebung).
+        $runZip = Join-Path $inner.FullName 'run.zip'
+        if (Test-Path -LiteralPath $runZip) {
+            Write-Info 'entpacke run.zip …'
+            Expand-Archive -LiteralPath $runZip -DestinationPath $inner.FullName -Force
+            Remove-Item -LiteralPath $runZip -Force   # spart 25 MB in jedem Profil
+        }
+        if (Test-Path -LiteralPath $target) {
+            $old = "$target.alt-" + [Guid]::NewGuid().ToString('N').Substring(0, 8)
+            Rename-Item -LiteralPath $target -NewName (Split-Path $old -Leaf)
+            Move-Item -LiteralPath $inner.FullName -Destination $target
+            Remove-Item -LiteralPath $old -Recurse -Force -ErrorAction SilentlyContinue
+        } else {
+            Move-Item -LiteralPath $inner.FullName -Destination $target
+        }
+        Write-Ok "installiert: $target"
+    } catch {
+        $script:Problems += "Vorlage $name konnte nicht installiert werden: $($_.Exception.Message)"
+        Write-Host "    FEHLER bei $name – wird übersprungen." -ForegroundColor Yellow
+    } finally {
+        if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($tmpZip) { Remove-Item -LiteralPath $tmpZip -Force -ErrorAction SilentlyContinue }
     }
 }
 
@@ -204,7 +272,12 @@ try {
         Write-Ok "installiert: $jreDir"
     }
 
-    # ------------------------------------------------------------------ 4. Verknüpfungen
+    # ------------------------------------------------------------------ 4. Camp-Vorlagen
+    Write-Step 'Camp-Vorlagen'
+    $templatesDir = Join-Path $DataDir 'shared\templates'
+    foreach ($t in $Templates) { Install-Template $t $templatesDir }
+
+    # ------------------------------------------------------------------ 5. Verknüpfungen
     Write-Step 'Verknüpfungen'
     $shell = New-Object -ComObject WScript.Shell
     $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) "$AppName.lnk"
@@ -221,6 +294,10 @@ try {
     }
 
     Write-Host ''
+    if ($script:Problems.Count -gt 0) {
+        foreach ($p in $script:Problems) { Write-Host "  ACHTUNG: $p" -ForegroundColor Yellow }
+        Write-Host '  Das Skript kann einfach erneut ausgeführt werden – es lädt nur, was noch fehlt.' -ForegroundColor Yellow
+    }
     Write-Host "  Fertig! Der $AppName kann jetzt über das Symbol auf dem Desktop gestartet werden." -ForegroundColor Green
     if (-not (Test-Path -LiteralPath (Join-Path $desktop 'Minecraft.lnk'))) {
         Write-Host '  Hinweis: Für Minecraft-Profile wird eine Verknüpfung "Minecraft" auf dem Desktop benötigt.' -ForegroundColor Yellow
@@ -234,6 +311,7 @@ try {
     if ($launch) {
         Start-Process -FilePath $javaw -ArgumentList "$JvmOptions `"-Dffhub.home=$DataDir`" -jar `"$jarPath`"" -WorkingDirectory $hubDir
     }
+    if ($script:Problems.Count -gt 0) { exit 2 }
     exit 0
 } catch {
     Write-Host ''
