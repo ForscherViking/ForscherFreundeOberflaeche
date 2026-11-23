@@ -1,0 +1,332 @@
+package com.forscherfreunde.hub.ui;
+
+import com.forscherfreunde.hub.model.Camp;
+import com.forscherfreunde.hub.model.ProfileStore;
+import com.forscherfreunde.hub.model.UserProfile;
+import com.forscherfreunde.hub.service.Background;
+import com.forscherfreunde.hub.service.MinecraftWorlds;
+import com.forscherfreunde.hub.service.Progress;
+import com.forscherfreunde.hub.ui.screens.CreateProfileScreen;
+import com.forscherfreunde.hub.ui.screens.DocsScreen;
+import com.forscherfreunde.hub.ui.screens.ProfileScreen;
+import com.forscherfreunde.hub.ui.screens.ProfilesScreen;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.KeyStroke;
+import javax.swing.WindowConstants;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+/**
+ * Das einzige Fenster der Anwendung. Enthält Kopfzeile, Bildschirm-Bereich, Fortschritts-Overlay
+ * und Hinweis-Blasen und steuert die Navigation zwischen den Bildschirmen.
+ */
+public final class AppWindow extends JFrame {
+
+    /** Hintergrundaufgabe mit Fortschrittsmeldung. */
+    @FunctionalInterface
+    public interface BusyTask<T> {
+        T run(Progress progress) throws Exception;
+    }
+
+    private final ProfileStore store;
+    private final ScreenHost host = new ScreenHost();
+    private final BusyOverlay busy = new BusyOverlay();
+    private final Toast toast = new Toast();
+    private final JLabel headerTitle = Ui.label("", Font.BOLD, 17f, Theme.TEXT);
+    private final JButton backButton = Ui.ghost("Zurück", Icons.Type.BACK);
+    private final JComponent backDivider = divider();
+    private boolean exiting;
+
+    public AppWindow(ProfileStore store) {
+        super("ForscherFreunde Hub");
+        this.store = store;
+        setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        setIconImages(appIcons());
+        setMinimumSize(new Dimension(980, 640));
+
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(Theme.BG);
+        root.add(createHeader(), BorderLayout.NORTH);
+        root.add(host, BorderLayout.CENTER);
+        setContentPane(root);
+        setGlassPane(busy);
+
+        getLayeredPane().add(toast, JLayeredPane.POPUP_LAYER);
+        getLayeredPane().addComponentListener(new ComponentAdapter() {
+            @Override public void componentResized(ComponentEvent e) { toast.relayout(); }
+        });
+
+        addWindowListener(new WindowAdapter() {
+            @Override public void windowClosing(WindowEvent e) { requestExit(); }
+        });
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "back");
+        root.getActionMap().put("back", new javax.swing.AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                Runnable back = host.current() != null ? host.current().backAction() : null;
+                if (back != null && !busy.isActive()) back.run();
+            }
+        });
+
+        sizeToScreen();
+        showProfiles();
+    }
+
+    // ------------------------------------------------------------------ Navigation
+
+    public ProfileStore store() { return store; }
+
+    public void showProfiles() { show(new ProfilesScreen(this)); }
+
+    public void showCreateProfile() {
+        if (store.isFull()) {
+            toast("Es sind bereits " + ProfileStore.MAX_PROFILES + " Profile vorhanden.", Icons.Type.ALERT, Theme.WARM);
+            return;
+        }
+        show(new CreateProfileScreen(this));
+    }
+
+    public void showProfile(UserProfile profile) { show(new ProfileScreen(this, profile)); }
+
+    public void showDocs(UserProfile profile, Runnable back) { show(new DocsScreen(this, profile, back)); }
+
+    public void show(Screen screen) {
+        host.show(screen);
+        headerTitle.setText(screen.title().isEmpty() ? " " : screen.title());
+        Runnable back = screen.backAction();
+        backButton.setVisible(back != null);
+        backDivider.setVisible(back != null);
+        for (var l : backButton.getActionListeners()) backButton.removeActionListener(l);
+        if (back != null) backButton.addActionListener(e -> back.run());
+        screen.onShown();
+    }
+
+    // ------------------------------------------------------------------ Hintergrundaufgaben
+
+    /** Führt {@code task} im Hintergrund aus und zeigt solange das Fortschritts-Overlay. */
+    public <T> void runBusy(String heading, BusyTask<T> task, Consumer<T> onSuccess, Consumer<Throwable> onError) {
+        busy.start(heading);
+        Progress progress = Background.onEdt(busy::update);
+        Background.run(() -> task.run(progress), result -> {
+            busy.finish();
+            if (onSuccess != null) onSuccess.accept(result);
+        }, error -> {
+            busy.finish();
+            if (onError != null) onError.accept(error);
+            else error("Das hat leider nicht geklappt", error);
+        });
+    }
+
+    public boolean isBusy() { return busy.isActive(); }
+
+    // ------------------------------------------------------------------ Dialoge & Hinweise
+
+    public void toast(String message) { toast(message, Icons.Type.CHECK, Theme.ACCENT); }
+
+    public void toast(String message, Icons.Type icon, Color color) { toast.show(message, icon, color); }
+
+    public void error(String title, Throwable t) {
+        String msg = t.getMessage() != null ? t.getMessage() : t.toString();
+        error(title, msg);
+    }
+
+    public void error(String title, String message) {
+        JOptionPane.showMessageDialog(this, message, title, JOptionPane.ERROR_MESSAGE);
+    }
+
+    public boolean confirm(String title, String message, String yes) {
+        Object[] options = {yes, "Abbrechen"};
+        int r = JOptionPane.showOptionDialog(this, message, title, JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
+        return r == 0;
+    }
+
+    // ------------------------------------------------------------------ Fenster
+
+    /** Holt das Fenster nach vorne (z. B. wenn ein Kind die App ein zweites Mal startet). */
+    public void bringToFront() {
+        if ((getExtendedState() & Frame.ICONIFIED) != 0) {
+            setExtendedState(getExtendedState() & ~Frame.ICONIFIED);
+        }
+        setVisible(true);
+        // Windows verweigert toFront() oft für Hintergrundprozesse; kurzes alwaysOnTop hilft.
+        setAlwaysOnTop(true);
+        toFront();
+        requestFocus();
+        setAlwaysOnTop(false);
+        toast("Der ForscherFreunde Hub ist schon geöffnet.", Icons.Type.ALERT, Theme.WARM);
+    }
+
+    /** Beim Start: Welten, die nach einem Absturz noch in Minecraft liegen, zurücksichern. */
+    public void recoverOnStartup() {
+        if (!MinecraftWorlds.hasCheckedOutWorlds()) return;
+        runBusy("Welten vom letzten Mal werden gesichert …", p -> {
+            MinecraftWorlds.checkOut(p);
+            return null;
+        }, r -> toast("Minecraft-Welten vom letzten Mal wurden gesichert."),
+                e -> error("Welten konnten nicht gesichert werden", e));
+    }
+
+    public void requestExit() {
+        if (exiting) return;
+        if (busy.isActive()) {
+            toast("Bitte warte, bis der aktuelle Vorgang fertig ist.", Icons.Type.ALERT, Theme.WARM);
+            return;
+        }
+        if (!confirm("Beenden", "Möchtest du den ForscherFreunde Hub wirklich beenden?", "Beenden")) return;
+        if (!MinecraftWorlds.hasCheckedOutWorlds()) {
+            exitNow();
+            return;
+        }
+        runBusy("Welten werden gesichert …", p -> {
+            MinecraftWorlds.checkOut(p);
+            return null;
+        }, r -> exitNow(), e -> {
+            if (confirm("Welten noch nicht vollständig gesichert", e.getMessage()
+                    + "\n\nTrotzdem beenden? Die Welten werden dann beim nächsten Start gesichert.", "Trotzdem beenden")) {
+                exitNow();
+            }
+        });
+    }
+
+    private void exitNow() {
+        exiting = true;
+        dispose();
+        System.exit(0);
+    }
+
+    private void sizeToScreen() {
+        Rectangle usable = getGraphicsConfiguration() != null
+                ? getGraphicsConfiguration().getBounds() : new Rectangle(0, 0, 1366, 768);
+        java.awt.Insets in = Toolkit.getDefaultToolkit().getScreenInsets(getGraphicsConfiguration());
+        int aw = usable.width - in.left - in.right;
+        int ah = usable.height - in.top - in.bottom;
+        int w = Math.min(1320, Math.max(getMinimumSize().width, (int) (aw * 0.88)));
+        int h = Math.min(860, Math.max(getMinimumSize().height, (int) (ah * 0.88)));
+        setSize(w, h);
+        setLocationRelativeTo(null);
+        // Kleine Laptop-Bildschirme (z. B. 1366×768): direkt maximiert starten.
+        if (aw <= 1440 || ah <= 820) setExtendedState(Frame.MAXIMIZED_BOTH);
+    }
+
+    // ------------------------------------------------------------------ Kopfzeile
+
+    private JComponent createHeader() {
+        JPanel header = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(Theme.BG_TOP);
+                g.fillRect(0, 0, getWidth(), getHeight());
+                g.setColor(Theme.BORDER);
+                g.fillRect(0, getHeight() - 1, getWidth(), 1);
+            }
+        };
+        header.setBorder(BorderFactory.createEmptyBorder(12, 22, 12, 18));
+
+        JPanel left = new JPanel();
+        left.setLayout(new javax.swing.BoxLayout(left, javax.swing.BoxLayout.X_AXIS));
+        left.setOpaque(false);
+        left.add(new LogoView());
+        left.add(Box.createHorizontalStrut(18));
+        left.add(backDivider);
+        left.add(Box.createHorizontalStrut(10));
+        left.add(backButton);
+        left.add(Box.createHorizontalStrut(8));
+        headerTitle.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 0));
+        backButton.setFocusable(false);
+        left.add(headerTitle);
+        backButton.setVisible(false);
+        backDivider.setVisible(false);
+
+        JButton exit = Ui.ghost("Beenden", Icons.Type.POWER);
+        exit.setFocusable(false);
+        exit.addActionListener(e -> requestExit());
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        right.setOpaque(false);
+        right.add(exit);
+
+        header.add(left, BorderLayout.WEST);
+        header.add(right, BorderLayout.EAST);
+        return header;
+    }
+
+    private static JComponent divider() {
+        JComponent d = new JComponent() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(Theme.BORDER);
+                g.fillRect(0, 6, 1, getHeight() - 12);
+            }
+        };
+        d.setPreferredSize(new Dimension(1, 40));
+        d.setMaximumSize(new Dimension(1, 40));
+        return d;
+    }
+
+    private static List<Image> appIcons() {
+        BufferedImage icon = Images.get("icon.png");
+        List<Image> list = new ArrayList<>();
+        for (int s : new int[] {16, 24, 32, 48, 64}) list.add(Images.scale(icon, s, s));
+        return list;
+    }
+
+    /** Das ForscherFreunde-Logo in der Kopfzeile, scharf skaliert. */
+    private static final class LogoView extends JComponent {
+        private final BufferedImage logo = Images.get("logo.png");
+        private BufferedImage scaled;
+
+        LogoView() {
+            int h = 40;
+            Dimension d = new Dimension(Math.round(logo.getWidth() * h / (float) logo.getHeight()), h);
+            setPreferredSize(d);
+            setMinimumSize(d);
+            setMaximumSize(d);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g;
+            double s = g2.getTransform().getScaleX();
+            int dw = (int) Math.round(getWidth() * s);
+            int dh = (int) Math.round(getHeight() * s);
+            if (scaled == null || scaled.getWidth() != dw || scaled.getHeight() != dh) scaled = Images.scale(logo, dw, dh);
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2.drawImage(scaled, 0, 0, getWidth(), getHeight(), null);
+        }
+    }
+
+    /** Liste der Bildnamen aller Camp (zum Vorladen). */
+    public static List<String> moduleImages() {
+        List<String> l = new ArrayList<>();
+        for (Camp m : Camp.values()) l.add(m.image());
+        return l;
+    }
+}
