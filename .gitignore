@@ -45,3 +45,6 @@ bin/
 !gradle/wrapper/gradle-wrapper.jar
 Output/
 jre/
+
+### Privater Update-Schlüssel – niemals committen ###
+*signing-key*

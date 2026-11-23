@@ -4,7 +4,8 @@ plugins {
 }
 
 group = 'com.forscherfreunde.hub'
-version = '2.0.0'
+// Version kommt beim Release aus dem Git-Tag (z. B. v2.0.1 → -PappVersion=2.0.1)
+version = project.findProperty('appVersion') ?: '2.0.0'
 
 repositories {
     mavenCentral()
@@ -39,6 +40,23 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 17
     options.encoding = 'UTF-8'
     options.compilerArgs += ['-Xlint:all,-serial,-processing,-this-escape']
+}
+
+processResources {
+    def v = project.version.toString()
+    inputs.property('appVersion', v)
+    filesMatching('version.properties') { expand(version: v) }
+}
+
+// Einmalig: Schlüsselpaar für signierte Updates erzeugen (siehe README → „Updates“).
+tasks.register('updateKeygen', JavaExec) {
+    group = 'release'
+    description = 'Erzeugt das Ed25519-Schlüsselpaar für signierte Updates.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.forscherfreunde.hub.update.ReleaseTool'
+    args 'keygen',
+         new File(System.getProperty('user.home'), 'forscherfreunde-update-signing-key.txt').absolutePath,
+         file('src/main/resources/update/public-key.txt').absolutePath
 }
 
 application {

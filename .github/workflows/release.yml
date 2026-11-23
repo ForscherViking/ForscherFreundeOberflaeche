@@ -1,0 +1,56 @@
+# Veröffentlicht ein Update für alle Laptops.
+#
+#   git tag -a v2.0.1 -m "Was ist neu (wird den Betreuer:innen beim Update angezeigt)"
+#   git push origin v2.0.1
+#
+# Die Laptops laden das Update automatisch im Hintergrund und installieren es beim nächsten Start.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Bauen und testen
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          chmod +x gradlew
+          ./gradlew --no-daemon test jar -PappVersion="$VERSION"
+
+      - name: Update signieren
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::error::Secret UPDATE_SIGNING_KEY fehlt (siehe README → Updates)."; exit 1
+          fi
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          NOTES="$(git for-each-ref "refs/tags/${GITHUB_REF_NAME}" --format='%(contents)')"
+          java -cp build/libs/ForscherFreundeHub.jar com.forscherfreunde.hub.update.ReleaseTool release \
+            --version "${GITHUB_REF_NAME#v}" \
+            --jar build/libs/ForscherFreundeHub.jar \
+            --url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/ForscherFreundeHub.jar" \
+            --notes "$NOTES" \
+            --out build/release
+
+      - name: Release veröffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" build/release/* \
+            --title "ForscherFreunde Hub ${GITHUB_REF_NAME}" \
+            --notes "$(git for-each-ref "refs/tags/${GITHUB_REF_NAME}" --format='%(contents)')" \
+            --latest

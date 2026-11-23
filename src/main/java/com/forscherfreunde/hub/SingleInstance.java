@@ -55,6 +55,11 @@ public final class SingleInstance {
      *         Instanz läuft (diese wurde dann benachrichtigt).
      */
     public static SingleInstance acquire(Path stateDir) {
+        return acquire(stateDir, false);
+    }
+
+    /** @param waitForLock bis zu 20 s auf die Sperre warten (Neustart nach Update, alte Instanz beendet sich gerade) */
+    public static SingleInstance acquire(Path stateDir, boolean waitForLock) {
         Path lockFile = stateDir.resolve(LOCK_FILE);
         Path portFile = stateDir.resolve(PORT_FILE);
         FileChannel channel = null;
@@ -62,6 +67,15 @@ public final class SingleInstance {
             Files.createDirectories(stateDir);
             channel = FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
             FileLock lock = channel.tryLock();
+            for (int i = 0; lock == null && waitForLock && i < 100; i++) {
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                lock = channel.tryLock();
+            }
             if (lock == null) {
                 channel.close();
                 notifyRunningInstance(portFile);

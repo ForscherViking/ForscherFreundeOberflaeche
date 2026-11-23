@@ -10,6 +10,8 @@ import com.forscherfreunde.hub.ui.screens.CreateProfileScreen;
 import com.forscherfreunde.hub.ui.screens.DocsScreen;
 import com.forscherfreunde.hub.ui.screens.ProfileScreen;
 import com.forscherfreunde.hub.ui.screens.ProfilesScreen;
+import com.forscherfreunde.hub.update.Restart;
+import com.forscherfreunde.hub.update.UpdateManifest;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -63,6 +65,8 @@ public final class AppWindow extends JFrame {
     private final JLabel headerTitle = Ui.label("", Font.BOLD, 17f, Theme.TEXT);
     private final JButton backButton = Ui.ghost("Zurück", Icons.Type.BACK);
     private final JComponent backDivider = divider();
+    private final JButton updateButton = Ui.secondary("Update bereit", Icons.Type.RESTORE);
+    private UpdateManifest pendingUpdate;
     private boolean exiting;
 
     public AppWindow(ProfileStore store) {
@@ -195,26 +199,59 @@ public final class AppWindow extends JFrame {
                 e -> error("Welten konnten nicht gesichert werden", e));
     }
 
-    public void requestExit() {
+    public void requestExit() { leave(false); }
+
+    /** Zeigt in der Kopfzeile an, dass ein Update heruntergeladen und geprüft wurde. */
+    public void showUpdateReady(UpdateManifest m) {
+        boolean first = pendingUpdate == null;
+        pendingUpdate = m;
+        updateButton.setText("Update " + m.version() + " installieren");
+        updateButton.setVisible(true);
+        updateButton.getParent().revalidate();
+        if (first) toast("Ein Update ist bereit – es wird beim nächsten Start installiert.", Icons.Type.RESTORE, Theme.ACCENT);
+    }
+
+    /** Beenden oder (für ein Update) neu starten – sichert vorher ggf. die Minecraft-Welten. */
+    private void leave(boolean restart) {
         if (exiting) return;
         if (busy.isActive()) {
             toast("Bitte warte, bis der aktuelle Vorgang fertig ist.", Icons.Type.ALERT, Theme.WARM);
             return;
         }
-        if (!confirm("Beenden", "Möchtest du den ForscherFreunde Hub wirklich beenden?", "Beenden")) return;
+        boolean ok;
+        if (restart) {
+            String notes = pendingUpdate != null && !pendingUpdate.notes().isEmpty()
+                    ? "\n\nNeu in dieser Version:\n" + pendingUpdate.notes() : "";
+            ok = confirm("Update installieren", "Der Hub startet jetzt kurz neu und installiert Version "
+                    + pendingUpdate.version() + "." + notes, "Jetzt neu starten");
+        } else {
+            ok = confirm("Beenden", "Möchtest du den ForscherFreunde Hub wirklich beenden?", "Beenden");
+        }
+        if (!ok) return;
+        Runnable finish = restart ? this::restartNow : this::exitNow;
         if (!MinecraftWorlds.hasCheckedOutWorlds()) {
-            exitNow();
+            finish.run();
             return;
         }
         runBusy("Welten werden gesichert …", p -> {
             MinecraftWorlds.checkOut(p);
             return null;
-        }, r -> exitNow(), e -> {
+        }, r -> finish.run(), e -> {
             if (confirm("Welten noch nicht vollständig gesichert", e.getMessage()
-                    + "\n\nTrotzdem beenden? Die Welten werden dann beim nächsten Start gesichert.", "Trotzdem beenden")) {
-                exitNow();
+                    + "\n\nTrotzdem fortfahren? Die Welten werden dann beim nächsten Start gesichert.", "Trotzdem fortfahren")) {
+                finish.run();
             }
         });
+    }
+
+    private void restartNow() {
+        try {
+            Restart.spawnNewInstance();
+        } catch (java.io.IOException e) {
+            error("Neustart nicht möglich", e.getMessage() + "\n\nDas Update wird beim nächsten normalen Start installiert.");
+            return;
+        }
+        exitNow();
     }
 
     private void exitNow() {
@@ -269,8 +306,26 @@ public final class AppWindow extends JFrame {
         JButton exit = Ui.ghost("Beenden", Icons.Type.POWER);
         exit.setFocusable(false);
         exit.addActionListener(e -> requestExit());
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        updateButton.setFocusable(false);
+        updateButton.setVisible(false);
+        updateButton.setFont(Theme.font(Font.BOLD, 13.5f));
+        updateButton.setMargin(new java.awt.Insets(7, 14, 7, 16));
+        updateButton.setIcon(Icons.of(Icons.Type.RESTORE, 16, Theme.ACCENT));
+        Ui.style(updateButton, "arc: 999; borderWidth: 1; focusWidth: 0; innerFocusWidth: 0;"
+                + "background: #1c3324; hoverBackground: #234230; pressedBackground: #183021;"
+                + "borderColor: " + Theme.hex(Theme.ACCENT_LO) + "; hoverBorderColor: " + Theme.hex(Theme.ACCENT));
+        updateButton.addActionListener(e -> leave(true));
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0)) {
+            @Override public Dimension getPreferredSize() {
+                Dimension d = super.getPreferredSize();
+                return new Dimension(d.width, Math.max(d.height, 40));
+            }
+        };
         right.setOpaque(false);
+        JLabel version = Ui.label("Version " + com.forscherfreunde.hub.update.AppVersion.current(),
+                Font.PLAIN, 12.5f, Theme.alpha(Theme.MUTED, 0.7f));
+        right.add(version);
+        right.add(updateButton);
         right.add(exit);
 
         header.add(left, BorderLayout.WEST);
