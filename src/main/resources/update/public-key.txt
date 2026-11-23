@@ -1,0 +1,2 @@
+# Öffentlicher Schlüssel für Updates (Ed25519). Darf öffentlich sein.
+MCowBQYDK2VwAyEABpxNR8pUmx6/OUk2iZLmLG6GiHB6oDY4PKQowWu2KKc=
