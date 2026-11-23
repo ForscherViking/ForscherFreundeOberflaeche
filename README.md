@@ -3,6 +3,35 @@
 Startoberfläche für die ForscherFreunde-Camps: Kinder wählen ihr Profil und starten IntelliJ
 (Code-Camps) oder Minecraft (Minecraft-Module). Läuft bewusst schlank, auch auf leistungsschwachen Laptops.
 
+## Installation auf einem Laptop
+
+**`ForscherFreunde-Installieren.bat`** aus dem neuesten GitHub-Release herunterladen und doppelklicken.
+Keine Admin-Rechte nötig. Das Skript (`installer/install.ps1`):
+
+1. legt `Desktop\ForscherFreundeOberflaeche` mit `shared\templates|saves|backup|documentation` an –
+   **bestehende Ordner und Daten werden nie überschrieben**,
+2. lädt den Hub nach `Desktop\ForscherFreundeOberflaeche\hub` (nur wenn er dort noch fehlt; SHA-256-geprüft),
+3. lädt eine Java-Laufzeit (Temurin 21, SHA-256-geprüft) nach `%LOCALAPPDATA%\ForscherFreundeHub\jre`
+   (nicht auf den Desktop, damit OneDrive keine Laufzeitdateien synchronisiert oder auslagert),
+4. erstellt die Verknüpfung **„ForscherFreunde Hub“** mit ForscherFreunde-Symbol auf dem Desktop und im Startmenü.
+
+Es kann beliebig oft ausgeführt werden (z. B. um eine gelöschte Verknüpfung wiederherzustellen).
+
+| Aufruf | Zweck |
+|---|---|
+| `ForscherFreunde-Installieren.bat -Quiet` | ohne Rückfragen, für die Verteilung auf viele Laptops |
+| `... -Start` | Hub danach direkt starten |
+| `... -UpdateApp` | vorhandene Hub-JAR durch die neueste ersetzen (sonst macht das der Auto-Updater) |
+| `... -OfflineDir E:\FF` | ohne Internet, z. B. vom USB-Stick |
+
+**Offline / USB-Stick** (spart 130 × 45 MB Download): `install.ps1`, `ForscherFreunde-Installieren.bat`,
+`ForscherFreundeHub.jar`, `ForscherFreunde.ico` und eine Temurin-JRE als ZIP
+(`OpenJDK21U-jre_x64_windows_hotspot_*.zip` von adoptium.net) in einen Ordner legen und dort die `.bat` starten –
+das Skript erkennt den Ordner automatisch.
+
+> Windows SmartScreen kann beim ersten Start einer heruntergeladenen `.bat` warnen („Weitere Informationen“ →
+> „Trotzdem ausführen“).
+
 ## Bauen & Starten
 
 ```bash
@@ -11,7 +40,8 @@ Startoberfläche für die ForscherFreunde-Camps: Kinder wählen ihr Profil und s
 ./gradlew run          # direkt aus dem Quellcode starten
 ```
 
-Ausgeliefert wird wie bisher `ForscherFreundeHub.jar` + `jre/` + `start.bat`. **Benötigt Java 17 oder neuer.**
+Benötigt Java 17 oder neuer (der Installer bringt Java 21 mit). `start.bat` ist für die alte Installationsart
+(`jre\` neben der JAR) weiterhin enthalten.
 
 ### Optionen
 
@@ -79,6 +109,7 @@ com.forscherfreunde.hub
 ├── AppPaths           alle Pfade an einer Stelle
 ├── model/             Camp (alle Camps/Module), UserProfile, ProfileStore (profiles.json)
 ├── service/           Dateioperationen, Backups, Minecraft-Welten, Programmstarts – ohne UI-Code
+├── installer/         (Repo-Wurzel) install.ps1 + .bat + Symbol – werden bei jedem Release mit veröffentlicht
 ├── update/            Auto-Update: Prüfen, Laden, Signatur, Start der neuesten Version, Release-Werkzeug
 └── ui/                Theme, Animationen, Bild-Cache, Karten-Komponenten
     └── screens/       Profilübersicht, Profil anlegen, Profilseite, Dokumentation

@@ -45,6 +45,7 @@ jobs:
             --url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/ForscherFreundeHub.jar" \
             --notes "$NOTES" \
             --out build/release
+          cp installer/install.ps1 installer/ForscherFreunde-Installieren.bat installer/ForscherFreunde.ico build/release/
 
       - name: Release veröffentlichen
         env:

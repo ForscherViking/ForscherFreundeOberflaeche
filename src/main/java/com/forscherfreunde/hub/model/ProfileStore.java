@@ -29,7 +29,7 @@ public final class ProfileStore {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Pattern INVALID_CHARS = Pattern.compile("[\\\\/:*?\"<>|\\p{Cntrl}]");
     private static final Pattern RESERVED = Pattern.compile(
-            "(?i)^(con|prn|aux|nul|com[0-9]|lpt[0-9]|shared)$");
+            "(?i)^(con|prn|aux|nul|com[0-9]|lpt[0-9]|shared|hub)$");
 
     private final List<UserProfile> profiles = new ArrayList<>();
 
