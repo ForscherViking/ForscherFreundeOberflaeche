@@ -1,7 +1,12 @@
-# Veröffentlicht ein Update für alle Laptops.
+# Veröffentlicht ein Update für alle Laptops. Zwei Wege funktionieren:
 #
-#   git tag -a v2.0.1 -m "Was ist neu (wird den Betreuer:innen beim Update angezeigt)"
-#   git push origin v2.0.1
+#  a) Kommandozeile:
+#       git tag -a v2.0.3 -m "Was ist neu (wird den Betreuer:innen beim Update angezeigt)"
+#       git push origin v2.0.3
+#
+#  b) GitHub-Oberfläche: Releases → „Draft a new release“ → neuen Tag v2.0.3 eingeben,
+#     Beschreibung = Text für die Betreuer:innen → „Publish release“.
+#     Die Action hängt die Dateien danach automatisch an dieses Release an.
 #
 # Die Laptops laden das Update automatisch im Hintergrund und installieren es beim nächsten Start.
 name: Release
@@ -13,22 +18,45 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref_name }}
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Bauen und testen
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
           chmod +x gradlew
-          ./gradlew --no-daemon test jar -PappVersion="$VERSION"
+          ./gradlew --no-daemon test jar -PappVersion="${TAG#v}"
+
+      - name: Text für die Betreuer:innen ermitteln
+        run: |
+          git fetch --force origin "refs/tags/${TAG}:refs/tags/${TAG}"
+          if [ "$(git cat-file -t "refs/tags/${TAG}")" = "tag" ]; then
+            # annotierter Tag: dessen Nachricht
+            git for-each-ref "refs/tags/${TAG}" --format='%(contents)' > notes.txt
+          elif gh release view "$TAG" --json body -q .body > notes.txt 2>/dev/null && [ -s notes.txt ]; then
+            # über die GitHub-Oberfläche angelegtes Release: dessen Beschreibung
+            :
+          else
+            # einfacher Tag: nur die Überschrift des Commits
+            git log -1 --format=%s > notes.txt
+          fi
+          # Interne Commit-Zeilen und Signaturen gehören nicht in den Update-Hinweis
+          sed -i -e '/^Co-Authored-By:/Id' -e '/^Claude-Session:/d' -e '/^-----BEGIN PGP/,/^-----END PGP/d' notes.txt
+          sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' notes.txt
+          echo "----- Hinweistext -----"; cat notes.txt
 
       - name: Update signieren
         env:
@@ -37,21 +65,23 @@ jobs:
           if [ -z "$UPDATE_SIGNING_KEY" ]; then
             echo "::error::Secret UPDATE_SIGNING_KEY fehlt (siehe README → Updates)."; exit 1
           fi
-          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
-          NOTES="$(git for-each-ref "refs/tags/${GITHUB_REF_NAME}" --format='%(contents)')"
           java -cp build/libs/ForscherFreundeHub.jar com.forscherfreunde.hub.update.ReleaseTool release \
-            --version "${GITHUB_REF_NAME#v}" \
+            --version "${TAG#v}" \
             --jar build/libs/ForscherFreundeHub.jar \
-            --url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/ForscherFreundeHub.jar" \
-            --notes "$NOTES" \
+            --url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/ForscherFreundeHub.jar" \
+            --notes "$(cat notes.txt)" \
             --out build/release
           cp installer/install.ps1 installer/ForscherFreunde-Installieren.bat installer/ForscherFreunde.ico build/release/
 
       - name: Release veröffentlichen
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" build/release/* \
-            --title "ForscherFreunde Hub ${GITHUB_REF_NAME}" \
-            --notes "$(git for-each-ref "refs/tags/${GITHUB_REF_NAME}" --format='%(contents)')" \
-            --latest
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release existiert schon (z. B. über die GitHub-Oberfläche angelegt) – Dateien werden angehängt."
+            gh release upload "$TAG" build/release/* --clobber
+            gh release edit "$TAG" --draft=false --latest
+          else
+            gh release create "$TAG" build/release/* \
+              --title "ForscherFreunde Hub ${TAG}" \
+              --notes-file notes.txt \
+              --latest
+          fi

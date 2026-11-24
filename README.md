@@ -116,7 +116,12 @@ git tag -a v2.0.1 -m "Fehler beim Backup behoben"   # Nachricht wird beim Update
 git push origin v2.0.1
 ```
 
+Alternativ auf GitHub: *Releases → Draft a new release*, neuen Tag (z. B. `v2.0.3`) eintragen, Beschreibung =
+Hinweistext für die Betreuer:innen, *Publish release*. Die Action hängt die Dateien dann an dieses Release an.
+
 Die GitHub Action (`.github/workflows/release.yml`) baut, testet, signiert und veröffentlicht das Release.
+Erst wenn sie grün ist, enthält das Release `update.json`, die JAR und den Installer – vorher bitte keine leeren
+Releases stehen lassen, sonst zeigt „neuestes Release“ auf ein Release ohne Dateien.
 Die Versionsnummer kommt aus dem Tag und muss höher sein als die aktuelle.
 
 **Ein fehlerhaftes Update zurückziehen:** einfach eine neue, höhere Version mit dem alten Stand veröffentlichen
