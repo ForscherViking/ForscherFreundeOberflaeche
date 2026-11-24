@@ -181,6 +181,11 @@ public final class AppWindow extends JFrame {
 
     /** Holt das Fenster nach vorne (z. B. wenn ein Kind die App ein zweites Mal startet). */
     public void bringToFront() {
+        restoreWindow();
+        toast("Der ForscherFreunde Hub ist schon geöffnet.", Icons.Type.ALERT, Theme.WARM);
+    }
+
+    private void restoreWindow() {
         if ((getExtendedState() & Frame.ICONIFIED) != 0) {
             setExtendedState(getExtendedState() & ~Frame.ICONIFIED);
         }
@@ -190,7 +195,40 @@ public final class AppWindow extends JFrame {
         toFront();
         requestFocus();
         setAlwaysOnTop(false);
-        toast("Der ForscherFreunde Hub ist schon geöffnet.", Icons.Type.ALERT, Theme.WARM);
+    }
+
+    /**
+     * Minimiert den Hub in die Taskleiste, sobald {@code ext} läuft, und holt ihn zurück, wenn es
+     * geschlossen wurde. Abschaltbar mit {@code -Dffhub.autoMinimize=false}.
+     *
+     * @param onEnd läuft auf dem Swing-Thread, wenn das Programm geschlossen wurde oder nie startete
+     */
+    public void minimizeWhileRunning(com.forscherfreunde.hub.service.ExternalApp ext, long startTimeoutMillis,
+                                     java.util.function.Consumer<com.forscherfreunde.hub.service.AppWatcher.End> onEnd) {
+        boolean auto = !"false".equalsIgnoreCase(System.getProperty("ffhub.autoMinimize"));
+        boolean[] minimized = {false};
+        com.forscherfreunde.hub.service.AppWatcher.watch(ext, startTimeoutMillis,
+                new com.forscherfreunde.hub.service.AppWatcher.Listener() {
+            @Override public void started() {
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    if (auto && !exiting) {
+                        minimized[0] = true;
+                        setExtendedState(getExtendedState() | Frame.ICONIFIED);
+                    }
+                });
+            }
+
+            @Override public void ended(com.forscherfreunde.hub.service.AppWatcher.End how) {
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    if (exiting) return;
+                    if (minimized[0]) {
+                        restoreWindow();
+                        toast("Willkommen zurück! " + ext.title() + " wurde geschlossen.", Icons.Type.CHECK, Theme.ACCENT);
+                    }
+                    onEnd.accept(how);
+                });
+            }
+        });
     }
 
     /** Beim Start: Welten, die nach einem Absturz noch in Minecraft liegen, zurücksichern. */

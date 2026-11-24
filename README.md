@@ -55,7 +55,18 @@ Benötigt Java 17 oder neuer (der Installer bringt Java 21 mit). `start.bat` ist
 | `-Dffhub.animations=false` | alle Animationen aus (für sehr alte Rechner) |
 | `-Dffhub.idea=PFAD\idea64.exe` | IntelliJ-Pfad fest vorgeben (sonst: PATH, `Program Files\JetBrains`, Toolbox) |
 | `-Dffhub.updates=false` | automatische Updates aus |
+| `-Dffhub.autoMinimize=false` | Hub beim Start von IntelliJ/Minecraft nicht minimieren |
 | `-Dffhub.updateUrl=URL` / `FFHUB_UPDATE_URL` | andere Update-Quelle (z. B. ein lokaler Server im Camp) |
+
+## IntelliJ / Minecraft starten
+
+* Solange IntelliJ bzw. Minecraft läuft, liegt der Hub minimiert in der Taskleiste. Wird das Programm
+  geschlossen, kommt der Hub nach ca. 3–5 Sekunden von selbst wieder nach vorne.
+  (Abschaltbar mit `-Dffhub.autoMinimize=false`.)
+* **Einzelinstanz-Sperre:** Läuft IntelliJ bzw. Minecraft schon – auch wenn es noch lädt –, startet ein
+  weiterer Klick kein zweites Mal; der Hub minimiert sich nur, damit das laufende Programm sichtbar ist.
+* Erkannt wird am Programmpfad: IntelliJ = `idea64.exe`, Minecraft = Launcher oder Spiel (Pfad enthält
+  „minecraft“). Geprüft wird alle 2 Sekunden und nur, solange ein Programm beobachtet wird.
 
 ## Ergebnisse auf USB-Stick mitnehmen
 

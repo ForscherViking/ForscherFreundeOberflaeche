@@ -3,6 +3,7 @@ package com.forscherfreunde.hub.ui.screens;
 import com.forscherfreunde.hub.model.Camp;
 import com.forscherfreunde.hub.model.UserProfile;
 import com.forscherfreunde.hub.service.Background;
+import com.forscherfreunde.hub.service.ExternalApp;
 import com.forscherfreunde.hub.service.Launcher;
 import com.forscherfreunde.hub.service.MinecraftWorlds;
 import com.forscherfreunde.hub.service.WorkspaceService;
@@ -21,7 +22,6 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.Timer;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -40,7 +40,6 @@ public final class ProfileScreen extends Screen {
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy 'um' HH:mm")
             .withZone(ZoneId.systemDefault());
-    private static final int START_COOLDOWN_MS = 8000;
 
     private final UserProfile profile;
     private final Camp module;
@@ -156,23 +155,33 @@ public final class ProfileScreen extends Screen {
         }, e -> app.error("Welten konnten nicht vollständig gesichert werden", e));
     }
 
-    /** Startet IntelliJ/Minecraft. Der Knopf wird kurz gesperrt, damit nicht zehn Fenster aufgehen. */
+    /**
+     * Startet IntelliJ/Minecraft – aber nur, wenn es nicht schon läuft (Einzelinstanz-Sperre: Kinder
+     * klicken auf langsamen Laptops gern mehrfach, während IntelliJ noch lädt). Solange das Programm
+     * läuft, liegt der Hub minimiert in der Taskleiste und kommt danach von selbst zurück.
+     */
     private void launch() {
+        ExternalApp ext = profile.isCodeProfile() ? ExternalApp.INTELLIJ : ExternalApp.MINECRAFT;
         start.setEnabled(false);
         start.setText("Wird gestartet …");
-        Timer cooldown = new Timer(START_COOLDOWN_MS, e -> {
-            start.setText(startText);
-            start.setEnabled(true);
-        });
-        cooldown.setRepeats(false);
-        cooldown.start();
         Background.run(() -> {
+            if (ext.isRunning()) return false;
             if (profile.isCodeProfile()) Launcher.openIntelliJ(profile.modulePath());
             else Launcher.openMinecraft();
-            return null;
-        }, r -> app.toast(profile.isCodeProfile() ? "IntelliJ wird geöffnet – einen Moment Geduld."
-                : "Minecraft wird gestartet – viel Spaß!"), e -> {
-            cooldown.stop();
+            return true;
+        }, launched -> {
+            if (launched) {
+                app.toast(ext.title() + " wird geöffnet – einen Moment Geduld.");
+            } else {
+                app.toast(ext.title() + " ist schon geöffnet.", Icons.Type.ALERT, Theme.WARM);
+            }
+            start.setText(ext.title() + " läuft …");
+            // IntelliJ braucht auf schwachen Laptops lange, bis der Prozess sicher erkennbar ist
+            app.minimizeWhileRunning(ext, launched ? 120_000 : 10_000, how -> {
+                start.setText(startText);
+                start.setEnabled(true);
+            });
+        }, e -> {
             start.setText(startText);
             start.setEnabled(true);
             app.error("Start nicht möglich", e);
