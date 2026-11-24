@@ -25,7 +25,7 @@ public final class ProfileCard extends HoverCard {
     public static final int HEIGHT = 196;
     private static final int PAD = 18;
     private static final int THUMB = 76;
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm")
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM., HH:mm")
             .withZone(ZoneId.systemDefault());
 
     /** Aktionen, die die Karte auslösen kann. */
@@ -35,6 +35,7 @@ public final class ProfileCard extends HoverCard {
         void backup(UserProfile p);
         void restore(UserProfile p);
         void delete(UserProfile p);
+        void export(UserProfile p);
     }
 
     private final UserProfile profile;
@@ -65,6 +66,7 @@ public final class ProfileCard extends HoverCard {
             addAction(bar, Icons.Type.BACKUP, "Backup erstellen", Theme.MUTED, () -> actions.backup(profile));
             addAction(bar, Icons.Type.RESTORE, "Backup wiederherstellen", Theme.MUTED, () -> actions.restore(profile));
         }
+        addAction(bar, Icons.Type.USB, "Auf USB-Stick speichern", Theme.MUTED, () -> actions.export(profile));
         addAction(bar, Icons.Type.TRASH, "Profil löschen", new Color(0xE8857E), () -> actions.delete(profile));
 
         if (module != null) Images.load(module.image(), thumb::setSource);

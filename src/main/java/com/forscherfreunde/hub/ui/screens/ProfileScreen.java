@@ -81,6 +81,10 @@ public final class ProfileScreen extends Screen {
         start.addActionListener(e -> launch());
         JButton docs = Ui.secondary("Dokumentation", Icons.Type.BOOK);
         docs.addActionListener(e -> app.showDocs(profile, () -> app.show(new ProfileScreen(app, profile, false))));
+        JButton usb = Ui.secondary("Auf USB-Stick speichern", Icons.Type.USB);
+        usb.setToolTipText(profile.isCodeProfile() ? "Speichert dein Projekt zum Mitnehmen"
+                : "Speichert deine Minecraft-Welten zum Mitnehmen");
+        usb.addActionListener(e -> app.showExport(profile, () -> app.show(new ProfileScreen(app, profile, false))));
 
         side.add(Box.createVerticalGlue());
         put(side, badge);
@@ -94,6 +98,8 @@ public final class ProfileScreen extends Screen {
         put(side, stretch(start, 62));
         side.add(Box.createVerticalStrut(12));
         put(side, stretch(docs, 50));
+        side.add(Box.createVerticalStrut(12));
+        put(side, stretch(usb, 50));
         if (profile.isCodeProfile()) {
             JPanel row = new JPanel(new GridLayout(1, 2, 12, 0));
             row.setOpaque(false);

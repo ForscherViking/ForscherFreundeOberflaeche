@@ -49,8 +49,7 @@ public final class MinecraftWorlds {
         if (Files.isDirectory(owner)) {
             Path target = worldsOf(owner);
             Files.createDirectories(target);
-            FileOps.copyTree(saves, target, p -> !p.getFileName().toString().equals(MARKER),
-                    progress, "Welten werden gesichert …");
+            FileOps.copyTree(saves, target, MinecraftWorlds::isWorldFile, progress, "Welten werden gesichert …");
         }
         try {
             FileOps.clearDirectory(saves, p -> p.getFileName().toString().equals(MARKER));
@@ -59,6 +58,33 @@ public final class MinecraftWorlds {
                     + "Bitte schließe Minecraft zuerst.", e);
         }
         Files.deleteIfExists(marker);
+    }
+
+    /**
+     * Übernimmt den aktuellen Stand aus .minecraft/saves in das Profil, <em>ohne</em> die Welten
+     * aus Minecraft zu entfernen (z. B. vor dem Export auf einen USB-Stick). Tut nichts, wenn
+     * gerade die Welten eines anderen Profils eingecheckt sind.
+     */
+    public static synchronized void syncToProfile(UserProfile profile, Progress progress) throws IOException {
+        Path saves = AppPaths.minecraftSaves();
+        Path marker = saves.resolve(MARKER);
+        if (!Files.exists(marker)) return;
+        Path owner = Paths.get(Files.readString(marker, StandardCharsets.UTF_8).trim());
+        if (!owner.toAbsolutePath().normalize().equals(profile.workDir().toAbsolutePath().normalize())) return;
+        Path target = worldsOf(owner);
+        Files.createDirectories(target);
+        FileOps.copyTree(saves, target, MinecraftWorlds::isWorldFile, progress, "Aktuelle Welten werden übernommen …");
+    }
+
+    /** Markierung und die von Minecraft gesperrte session.lock nicht mitkopieren. */
+    private static boolean isWorldFile(Path p) {
+        String n = p.getFileName().toString();
+        return !n.equals(MARKER) && !n.equals("session.lock");
+    }
+
+    /** Ordner mit den Welten eines Profils. */
+    public static Path worldsDir(UserProfile profile) {
+        return worldsOf(profile.workDir());
     }
 
     public static boolean hasCheckedOutWorlds() {

@@ -57,6 +57,24 @@ Benötigt Java 17 oder neuer (der Installer bringt Java 21 mit). `start.bat` ist
 | `-Dffhub.updates=false` | automatische Updates aus |
 | `-Dffhub.updateUrl=URL` / `FFHUB_UPDATE_URL` | andere Update-Quelle (z. B. ein lokaler Server im Camp) |
 
+## Ergebnisse auf USB-Stick mitnehmen
+
+Am Ende des Camps klickt jedes Kind auf seiner Profilseite auf **„Auf USB-Stick speichern“**
+(Betreuer:innen: USB-Symbol auf der Profilkarte in der Übersicht).
+
+* Ist genau ein Stick eingesteckt, wird sofort gespeichert; sonst wartet der Hub und speichert,
+  sobald ein Stick erkannt wird. Bei mehreren Sticks wird per Klick gewählt.
+  Gestartet wird immer nur über den Knopf – ein eingesteckter Stick wird nie ungefragt beschrieben.
+* Ergebnis: `<Stick>\ForscherFreunde\<Name> - <Camp> - <Datum>.zip` mit `LIESMICH.txt`
+  (wie man zu Hause weitermacht). Vorhandene Dateien werden nie überschrieben.
+* **Code-Camps:** das Projekt ohne `build/`, `.gradle/`, `out/` und ohne die Minecraft-Laufzeit `run/` –
+  die selbst gebauten Testwelten (`run/saves`) kommen aber mit.
+* **Minecraft-Module:** alle Welten des Profils, inklusive des aktuellen Stands, falls Minecraft gerade läuft.
+* Sicher: freier Platz wird vorher geprüft, die Datei wird erst als `.part` geschrieben, auf den Stick
+  geschrieben (nicht nur in den Cache), überprüft und erst dann umbenannt.
+* Wird ein Stick nicht als Wechseldatenträger erkannt (manche USB-Festplatten):
+  „Anderen Ordner wählen …“.
+
 ## Updates (Fernwartung der Laptops)
 
 Die Laptops aktualisieren sich selbst – niemand muss mehr 130 Geräte einzeln anfassen.

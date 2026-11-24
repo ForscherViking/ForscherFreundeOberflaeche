@@ -122,6 +122,10 @@ public final class AppWindow extends JFrame {
 
     public void showDocs(UserProfile profile, Runnable back) { show(new DocsScreen(this, profile, back)); }
 
+    public void showExport(UserProfile profile, Runnable back) {
+        show(new com.forscherfreunde.hub.ui.screens.ExportScreen(this, profile, back));
+    }
+
     public void show(Screen screen) {
         host.show(screen);
         headerTitle.setText(screen.title().isEmpty() ? " " : screen.title());

@@ -95,6 +95,8 @@ public final class ProfilesScreen extends Screen implements ProfileCard.Actions 
 
     @Override public void restore(UserProfile p) { ProfileActions.restore(app, p, null); }
 
+    @Override public void export(UserProfile p) { app.showExport(p, app::showProfiles); }
+
     @Override
     public void delete(UserProfile p) {
         if (!app.confirm("Profil löschen",

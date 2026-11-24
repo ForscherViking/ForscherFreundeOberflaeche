@@ -22,7 +22,7 @@ import java.util.Map;
 public final class Icons {
 
     public enum Type {
-        PLAY, BOOK, BACK, POWER, TRASH, BACKUP, RESTORE, PLUS, CHECK, CODE, CUBE, FILE, VIDEO, FOLDER, ALERT, USER
+        PLAY, BOOK, BACK, POWER, TRASH, BACKUP, RESTORE, PLUS, CHECK, CODE, CUBE, FILE, VIDEO, FOLDER, ALERT, USER, USB
     }
 
     private record Glyph(Shape[] stroke, Shape[] fill) { }
@@ -55,6 +55,9 @@ public final class Icons {
         GLYPHS.put(Type.FOLDER, new Glyph(new Shape[] {poly(true, 3, 5, 9.5, 5, 11.5, 7.5, 21, 7.5, 21, 19, 3, 19)}, new Shape[0]));
         GLYPHS.put(Type.ALERT, new Glyph(new Shape[] {poly(true, 12, 3, 22, 20, 2, 20), line(12, 9.5, 12, 13.5)},
                 new Shape[] {new Ellipse2D.Double(10.9, 15.9, 2.2, 2.2)}));
+        GLYPHS.put(Type.USB, new Glyph(new Shape[] {new RoundRectangle2D.Double(6.5, 9, 11, 12.5, 3.5, 3.5),
+                new RoundRectangle2D.Double(8.75, 3, 6.5, 6, 1, 1)},
+                new Shape[] {new java.awt.geom.Rectangle2D.Double(10.2, 5, 1.3, 1.6), new java.awt.geom.Rectangle2D.Double(12.5, 5, 1.3, 1.6)}));
         GLYPHS.put(Type.USER, new Glyph(new Shape[] {new Ellipse2D.Double(8, 3.5, 8, 8),
                 new Arc2D.Double(4, 13.5, 16, 14, 0, 180, Arc2D.OPEN)}, new Shape[0]));
     }
