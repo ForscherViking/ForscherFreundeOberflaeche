@@ -131,8 +131,10 @@ Alternativ auf GitHub: *Releases → Draft a new release*, neuen Tag (z. B. `v2.
 Hinweistext für die Betreuer:innen, *Publish release*. Die Action hängt die Dateien dann an dieses Release an.
 
 Die GitHub Action (`.github/workflows/release.yml`) baut, testet, signiert und veröffentlicht das Release.
-Erst wenn sie grün ist, enthält das Release `update.json`, die JAR und den Installer – vorher bitte keine leeren
-Releases stehen lassen, sonst zeigt „neuestes Release“ auf ein Release ohne Dateien.
+Erst wenn sie grün ist, enthält das Release `update.json`, die JAR und den Installer. Schlägt sie fehl, setzt sie
+ein noch leeres Release automatisch auf „Entwurf“ zurück, damit Installer und Updates weiter auf die letzte
+funktionierende Version zeigen. Danach den Fehler beheben und eine **neue** Versionsnummer veröffentlichen
+(eine alte Nummer würde wieder den alten Stand bauen).
 Die Versionsnummer kommt aus dem Tag und muss höher sein als die aktuelle.
 
 **Ein fehlerhaftes Update zurückziehen:** einfach eine neue, höhere Version mit dem alten Stand veröffentlichen

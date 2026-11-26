@@ -85,3 +85,16 @@ jobs:
               --notes-file notes.txt \
               --latest
           fi
+
+      # Schlägt etwas fehl, darf ein (über die GitHub-Oberfläche angelegtes) Release ohne Dateien nicht
+      # als „neuestes Release“ stehen bleiben – sonst liefern Installer-Link und Update-Prüfung 404.
+      # Als Entwurf zählt es nicht mehr; „neuestes“ zeigt wieder auf die letzte funktionierende Version.
+      - name: Bei Fehler leeres Release zurückziehen
+        if: failure()
+        run: |
+          if gh release view "$TAG" --json assets -q '.assets[].name' 2>/dev/null | grep -qx 'update.json'; then
+            echo "Release hat bereits Dateien – unverändert gelassen."
+          elif gh release view "$TAG" > /dev/null 2>&1; then
+            gh release edit "$TAG" --draft=true
+            echo "::warning::Release $TAG wurde auf Entwurf gesetzt, weil der Lauf fehlgeschlagen ist."
+          fi
