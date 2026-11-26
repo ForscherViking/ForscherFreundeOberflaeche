@@ -7,7 +7,7 @@ import java.util.function.Predicate;
  * Externe Programme, die der Hub startet und überwacht. Erkannt werden sie am Programmpfad
  * der laufenden Prozesse – das funktioniert auch, wenn sie nicht vom Hub gestartet wurden.
  */
-public enum ExternalApp {
+public enum ExternalApp implements WatchedProgram {
 
     /** IntelliJ IDEA: Hauptprozess ist {@code idea64.exe} (unter Windows) bzw. {@code idea}. */
     INTELLIJ("IntelliJ", cmd -> {
@@ -32,15 +32,15 @@ public enum ExternalApp {
         this.commandMatcher = commandMatcher;
     }
 
-    public String title() { return title; }
+    @Override public String title() { return title; }
 
     /** Läuft das Programm gerade (egal von wem gestartet)? Dauert einige Millisekunden → nicht auf dem Swing-Thread. */
-    public boolean isRunning() {
+    @Override public boolean isRunning() {
         return anyProcessMatches(commandMatcher);
     }
 
     /** Läuft (außer dem Hub selbst) ein Prozess, dessen Programmpfad {@code matcher} erfüllt? */
-    static boolean anyProcessMatches(Predicate<String> matcher) {
+    public static boolean anyProcessMatches(Predicate<String> matcher) {
         long self = ProcessHandle.current().pid();
         return ProcessHandle.allProcesses()
                 .filter(p -> p.pid() != self)

@@ -52,6 +52,7 @@ class ExportTest {
         write(m.resolve("run/mods/fabric.jar"), "x");
         write(m.resolve("run/options.txt"), "x");
         write(m.resolve("run/saves/Testwelt/level.dat"), "welt");
+        write(p.workDir().resolve("Meine Dateien/Bilder/Bild 1.png"), "bild");
 
         Path zip = ExportService.export(p, stick, Progress.NONE);
         assertTrue(zip.startsWith(stick.resolve("ForscherFreunde")));
@@ -60,7 +61,8 @@ class ExportTest {
         assertEquals(Set.of("LIESMICH.txt",
                 "CampMinecraftMods/src/main/java/Mod.java",
                 "CampMinecraftMods/build.gradle",
-                "CampMinecraftMods/run/saves/Testwelt/level.dat"), e);
+                "CampMinecraftMods/run/saves/Testwelt/level.dat",
+                "Meine Dateien/Bilder/Bild 1.png"), e);
         try (var s = Files.list(zip.getParent())) {
             assertTrue(s.noneMatch(f -> f.toString().endsWith(".part")), "keine halbfertigen Dateien");
         }

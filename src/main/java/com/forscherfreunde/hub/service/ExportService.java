@@ -35,9 +35,12 @@ public final class ExportService {
     public static final String FOLDER = "ForscherFreunde";
 
     /** Was exportiert wird. */
-    public record Plan(Path source, String rootName, List<Path> files, long bytes, int worlds) {
+    public record Plan(List<Entry> files, long bytes, int worlds, int myFiles) {
         public boolean isEmpty() { return files.isEmpty(); }
     }
+
+    /** Eine Datei und ihr Name im ZIP. */
+    public record Entry(Path file, String zipName) { }
 
     private ExportService() { }
 
@@ -45,7 +48,7 @@ public final class ExportService {
     public static Plan plan(UserProfile p) throws IOException {
         Path source = p.isCodeProfile() ? p.modulePath() : MinecraftWorlds.worldsDir(p);
         String rootName = p.isCodeProfile() ? p.getModuleName() : "Welten";
-        List<Path> files = new ArrayList<>();
+        List<Entry> files = new ArrayList<>();
         long[] bytes = {0};
         int worlds = 0;
         if (Files.isDirectory(source)) {
@@ -68,7 +71,7 @@ public final class ExportService {
                             && !(rel.getNameCount() > 2 && rel.getName(1).toString().equals("saves"))) {
                         return FileVisitResult.CONTINUE; // run/* außer run/saves
                     }
-                    files.add(file);
+                    files.add(new Entry(file, rootName + "/" + zipPath(rel)));
                     bytes[0] += a.size();
                     return FileVisitResult.CONTINUE;
                 }
@@ -82,7 +85,23 @@ public final class ExportService {
                 }
             }
         }
-        return new Plan(source, rootName, files, bytes[0], worlds);
+        // Bilder, mBlock-/Blockbench-Projekte usw. aus dem Programme-Bereich
+        int myFiles = 0;
+        Path mine = ProgramLauncher.filesDir(p);
+        if (Files.isDirectory(mine)) {
+            try (var s = Files.walk(mine)) {
+                for (Path f : (Iterable<Path>) s.filter(Files::isRegularFile)::iterator) {
+                    files.add(new Entry(f, ProgramLauncher.FILES_FOLDER + "/" + zipPath(mine.relativize(f))));
+                    bytes[0] += Files.size(f);
+                    myFiles++;
+                }
+            }
+        }
+        return new Plan(files, bytes[0], worlds, myFiles);
+    }
+
+    private static String zipPath(Path rel) {
+        return rel.toString().replace('\\', '/');
     }
 
     /**
@@ -128,9 +147,9 @@ public final class ExportService {
                 written++;
                 long done = 0;
                 byte[] buf = new byte[1 << 16];
-                for (Path f : plan.files()) {
-                    String name = plan.rootName() + "/" + plan.source().relativize(f).toString().replace('\\', '/');
-                    ZipEntry e = new ZipEntry(name);
+                for (Entry entry : plan.files()) {
+                    Path f = entry.file();
+                    ZipEntry e = new ZipEntry(entry.zipName());
                     e.setLastModifiedTime(Files.getLastModifiedTime(f));
                     out.putNextEntry(e);
                     try (InputStream in = Files.newInputStream(f)) {
@@ -204,6 +223,8 @@ public final class ExportService {
               .append("3. Die Ordner aus \"Welten\" in diesen saves-Ordner kopieren.\r\n")
               .append("4. Minecraft starten -> Einzelspieler: deine Welten sind da!\r\n");
         }
+        sb.append("\r\nIm Ordner \"").append(ProgramLauncher.FILES_FOLDER)
+          .append("\" findest du deine Bilder und Projekte aus Paint.NET, mBlock, Blockbench & Co. (falls vorhanden).\r\n");
         sb.append("\r\nViel Spass beim Weiterforschen!\r\nDein ForscherFreunde-Team\r\n");
         return sb.toString();
     }

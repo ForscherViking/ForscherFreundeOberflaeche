@@ -118,10 +118,13 @@ public final class ExportScreen extends Screen {
                 render(List.of());
                 return;
             }
-            what = profile.isCodeProfile()
-                    ? "dein Projekt (" + plan.files().size() + (plan.files().size() == 1 ? " Datei, " : " Dateien, ") + mb(plan.bytes()) + ")"
-                    : plan.worlds() == 1 ? "deine Minecraft-Welt (" + mb(plan.bytes()) + ")"
-                    : "deine " + plan.worlds() + " Minecraft-Welten (" + mb(plan.bytes()) + ")";
+            String main = profile.isCodeProfile() ? "dein Projekt"
+                    : plan.worlds() == 1 ? "deine Minecraft-Welt"
+                    : plan.worlds() > 1 ? "deine " + plan.worlds() + " Minecraft-Welten" : null;
+            String mine = plan.myFiles() == 0 ? null
+                    : plan.myFiles() == 1 ? "1 eigene Datei" : plan.myFiles() + " eigene Dateien";
+            what = (main != null && mine != null ? main + " und " + mine : main != null ? main : mine)
+                    + " (" + mb(plan.bytes()) + ")";
             state = State.WAITING;
             detect();
             poll.start();

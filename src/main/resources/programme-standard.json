@@ -1,0 +1,68 @@
+{
+  "_hinweis": "Programme im ForscherFreunde Hub. Diese Datei darf bearbeitet werden (Pfade, Namen, welche Camps). 'pfade': erster vorhandener Pfad wird gestartet (%ProgramFiles% usw. sind erlaubt). 'ordner': Unterordner in 'Meine Dateien' des Kindes. 'camps': leer = für alle Profile, sonst Camp-IDs wie CampMinecraftMods. 'neueDatei': Hub legt eine leere Datei im Ordner des Kindes an und öffnet sie – Strg+S speichert dann automatisch dort.",
+  "programme": [
+    {
+      "id": "paintnet",
+      "name": "Paint.NET",
+      "beschreibung": "Bilder malen und bearbeiten",
+      "farbe": "#4FA3E0",
+      "symbol": "bild",
+      "pfade": [
+        "%ProgramFiles%\\paint.net\\paintdotnet.exe",
+        "%LOCALAPPDATA%\\Programs\\paint.net\\paintdotnet.exe",
+        "/usr/bin/pinta"
+      ],
+      "protokoll": "paintdotnet:",
+      "prozess": "paintdotnet.exe",
+      "ordner": "Bilder",
+      "neueDatei": { "name": "Bild", "endung": "png", "breite": 1280, "hoehe": 720 },
+      "dateiendungen": ["png", "jpg", "jpeg", "pdn", "bmp", "gif"],
+      "camps": []
+    },
+    {
+      "id": "blockbench",
+      "name": "Blockbench",
+      "beschreibung": "3D-Modelle für Minecraft bauen",
+      "farbe": "#7B68EE",
+      "symbol": "wuerfel",
+      "pfade": [
+        "%LOCALAPPDATA%\\Programs\\Blockbench\\Blockbench.exe",
+        "%ProgramFiles%\\Blockbench\\Blockbench.exe",
+        "/usr/bin/blockbench"
+      ],
+      "prozess": "Blockbench.exe",
+      "ordner": "Blockbench",
+      "dateiendungen": ["bbmodel", "png", "json"],
+      "webAdresse": "https://web.blockbench.net",
+      "camps": []
+    },
+    {
+      "id": "mblock",
+      "name": "mBlock",
+      "beschreibung": "Roboter mit Blöcken programmieren",
+      "farbe": "#F5A524",
+      "symbol": "roboter",
+      "pfade": [
+        "%ProgramFiles(x86)%\\mBlock\\mBlock.exe",
+        "%ProgramFiles%\\mBlock\\mBlock.exe"
+      ],
+      "prozess": "mBlock.exe",
+      "ordner": "mBlock",
+      "dateiendungen": ["mblock", "sb3"],
+      "webAdresse": "https://ide.mblock.cc",
+      "camps": []
+    },
+    {
+      "id": "spike",
+      "name": "LEGO SPIKE",
+      "beschreibung": "LEGO-Roboter programmieren",
+      "farbe": "#E3000B",
+      "symbol": "roboter",
+      "pfade": [],
+      "ordner": "SPIKE",
+      "dateiendungen": ["llsp3", "llsp"],
+      "webAdresse": "https://spike.legoeducation.com",
+      "camps": []
+    }
+  ]
+}

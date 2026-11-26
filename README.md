@@ -58,6 +58,27 @@ Benötigt Java 17 oder neuer (der Installer bringt Java 21 mit). `start.bat` ist
 | `-Dffhub.autoMinimize=false` | Hub beim Start von IntelliJ/Minecraft nicht minimieren |
 | `-Dffhub.updateUrl=URL` / `FFHUB_UPDATE_URL` | andere Update-Quelle (z. B. ein lokaler Server im Camp) |
 
+## Programme-Bereich (Paint.NET, mBlock, Blockbench, SPIKE …)
+
+Auf der Profilseite öffnet **„Programme“** eine Übersicht weiterer Programme. Alles, was die Kinder dort
+erstellen, landet in ihrem Profil unter `Meine Dateien\<Programm>` (z. B. `…\Mia\Meine Dateien\Bilder`).
+
+* **Paint.NET:** Ein Klick legt im Ordner des Kindes ein leeres Bild an (`Bild 1.png`, `Bild 2.png` …) und öffnet
+  es. **Strg+S speichert ohne Dialog genau dorthin**, „Speichern unter“ startet ebenfalls in diesem Ordner.
+  Wird ein Bild nicht bemalt, räumt der Hub es nach dem Schließen wieder weg. Gestartet wird über
+  `paintdotnet.exe` oder – z. B. bei der Store-Version – über das offizielle `paintdotnet:`-Protokoll.
+* **„Deine Dateien“** zeigt die zuletzt gespeicherten Bilder/Projekte mit Vorschau; ein Klick öffnet sie wieder.
+* Ist ein Programm nicht installiert, startet – wenn vorhanden – die Web-Version im App-Fenster von Edge/Chrome
+  (mBlock: ide.mblock.cc, Blockbench: web.blockbench.net, SPIKE: spike.legoeducation.com).
+* Minimieren/Wiederöffnen und die Einzelinstanz-Sperre gelten auch hier.
+* „Auf USB-Stick speichern“ nimmt `Meine Dateien` mit.
+
+**Programme anpassen** – ohne neue Hub-Version: `ForscherFreundeOberflaeche\shared\programme.json`
+(wird beim ersten Öffnen mit der Standardliste angelegt). Pro Programm: `name`, `beschreibung`, `pfade`
+(erster vorhandener wird gestartet, `%ProgramFiles%` usw. erlaubt), `prozess` (Programmdatei zum Erkennen),
+`ordner`, `neueDatei` (leere Datei anlegen), `dateiendungen`, `webAdresse`, `camps` (leer = alle Profile).
+Für die SPIKE-Desktop-App ist noch kein Pfad eingetragen – bitte den Installationspfad der Laptops ergänzen.
+
 ## IntelliJ / Minecraft starten
 
 * Solange IntelliJ bzw. Minecraft läuft, liegt der Hub minimiert in der Taskleiste. Wird das Programm
@@ -147,7 +168,7 @@ com.forscherfreunde.hub
 ├── FFHub              Einstieg: Einzelinstanz prüfen → Oberfläche starten
 ├── SingleInstance     Dateisperre + lokaler Socket: zweiter Start holt nur das Fenster nach vorne
 ├── AppPaths           alle Pfade an einer Stelle
-├── model/             Camp (alle Camps/Module), UserProfile, ProfileStore (profiles.json)
+├── model/             Camp, UserProfile, ProfileStore (profiles.json), Program/ProgramCatalog (programme.json)
 ├── service/           Dateioperationen, Backups, Minecraft-Welten, Programmstarts – ohne UI-Code
 ├── installer/         (Repo-Wurzel) install.ps1 + .bat + Symbol – werden bei jedem Release mit veröffentlicht
 ├── update/            Auto-Update: Prüfen, Laden, Signatur, Start der neuesten Version, Release-Werkzeug

@@ -39,7 +39,7 @@ public final class AppWatcher {
 
     private AppWatcher() { }
 
-    public static void watch(ExternalApp app, long startTimeoutMillis, Listener listener) {
+    public static void watch(WatchedProgram app, long startTimeoutMillis, Listener listener) {
         watch(app::isRunning, startTimeoutMillis, 2000, listener);
     }
 

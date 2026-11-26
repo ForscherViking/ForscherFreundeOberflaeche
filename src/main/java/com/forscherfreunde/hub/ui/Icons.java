@@ -22,7 +22,7 @@ import java.util.Map;
 public final class Icons {
 
     public enum Type {
-        PLAY, BOOK, BACK, POWER, TRASH, BACKUP, RESTORE, PLUS, CHECK, CODE, CUBE, FILE, VIDEO, FOLDER, ALERT, USER, USB
+        PLAY, BOOK, BACK, POWER, TRASH, BACKUP, RESTORE, PLUS, CHECK, CODE, CUBE, FILE, VIDEO, FOLDER, ALERT, USER, USB, IMAGE, ROBOT, GRID
     }
 
     private record Glyph(Shape[] stroke, Shape[] fill) { }
@@ -58,6 +58,16 @@ public final class Icons {
         GLYPHS.put(Type.USB, new Glyph(new Shape[] {new RoundRectangle2D.Double(6.5, 9, 11, 12.5, 3.5, 3.5),
                 new RoundRectangle2D.Double(8.75, 3, 6.5, 6, 1, 1)},
                 new Shape[] {new java.awt.geom.Rectangle2D.Double(10.2, 5, 1.3, 1.6), new java.awt.geom.Rectangle2D.Double(12.5, 5, 1.3, 1.6)}));
+        GLYPHS.put(Type.IMAGE, new Glyph(new Shape[] {new RoundRectangle2D.Double(3, 4.5, 18, 15, 3, 3),
+                poly(false, 3.5, 17, 9, 11.5, 13, 15.5, 15.5, 13, 20.5, 18)},
+                new Shape[] {new Ellipse2D.Double(14.5, 7.5, 3, 3)}));
+        GLYPHS.put(Type.ROBOT, new Glyph(new Shape[] {new RoundRectangle2D.Double(5, 8, 14, 11, 3, 3),
+                line(12, 8, 12, 4.5), line(2.5, 12.5, 5, 12.5), line(19, 12.5, 21.5, 12.5), line(9.5, 16, 14.5, 16)},
+                new Shape[] {new Ellipse2D.Double(10.9, 2.6, 2.2, 2.2), new Ellipse2D.Double(8.2, 10.8, 2.2, 2.2),
+                        new Ellipse2D.Double(13.6, 10.8, 2.2, 2.2)}));
+        GLYPHS.put(Type.GRID, new Glyph(new Shape[] {new RoundRectangle2D.Double(3.5, 3.5, 7, 7, 2, 2),
+                new RoundRectangle2D.Double(13.5, 3.5, 7, 7, 2, 2), new RoundRectangle2D.Double(3.5, 13.5, 7, 7, 2, 2),
+                new RoundRectangle2D.Double(13.5, 13.5, 7, 7, 2, 2)}, new Shape[0]));
         GLYPHS.put(Type.USER, new Glyph(new Shape[] {new Ellipse2D.Double(8, 3.5, 8, 8),
                 new Arc2D.Double(4, 13.5, 16, 14, 0, 180, Arc2D.OPEN)}, new Shape[0]));
     }

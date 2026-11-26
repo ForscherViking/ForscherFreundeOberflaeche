@@ -96,7 +96,16 @@ public final class ProfileScreen extends Screen {
         side.add(Box.createVerticalStrut(34));
         put(side, stretch(start, 62));
         side.add(Box.createVerticalStrut(12));
-        put(side, stretch(docs, 50));
+        JButton programs = Ui.secondary("Programme", Icons.Type.GRID);
+        programs.setToolTipText("Paint.NET, mBlock, Blockbench … – speichert automatisch in deinem Ordner");
+        programs.addActionListener(e -> app.showPrograms(profile, () -> app.show(new ProfileScreen(app, profile, false))));
+        docs.setMargin(new java.awt.Insets(10, 10, 10, 12));
+        programs.setMargin(new java.awt.Insets(10, 10, 10, 12));
+        JPanel docsRow = new JPanel(new GridLayout(1, 2, 12, 0));
+        docsRow.setOpaque(false);
+        docsRow.add(programs);
+        docsRow.add(docs);
+        put(side, stretch(docsRow, 50));
         side.add(Box.createVerticalStrut(12));
         put(side, stretch(usb, 50));
         if (profile.isCodeProfile()) {

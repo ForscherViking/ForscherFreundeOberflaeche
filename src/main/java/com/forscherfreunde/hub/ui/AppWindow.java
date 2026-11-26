@@ -125,6 +125,10 @@ public final class AppWindow extends JFrame {
 
     public void showDocs(UserProfile profile, Runnable back) { show(new DocsScreen(this, profile, back)); }
 
+    public void showPrograms(UserProfile profile, Runnable back) {
+        show(new com.forscherfreunde.hub.ui.screens.ProgramsScreen(this, profile, back));
+    }
+
     public void showExport(UserProfile profile, Runnable back) {
         show(new com.forscherfreunde.hub.ui.screens.ExportScreen(this, profile, back));
     }
@@ -206,7 +210,7 @@ public final class AppWindow extends JFrame {
      *
      * @param onEnd läuft auf dem Swing-Thread, wenn das Programm geschlossen wurde oder nie startete
      */
-    public void minimizeWhileRunning(com.forscherfreunde.hub.service.ExternalApp ext, long startTimeoutMillis,
+    public void minimizeWhileRunning(com.forscherfreunde.hub.service.WatchedProgram ext, long startTimeoutMillis,
                                      java.util.function.Consumer<com.forscherfreunde.hub.service.AppWatcher.End> onEnd) {
         boolean auto = !"false".equalsIgnoreCase(System.getProperty("ffhub.autoMinimize"));
         boolean[] minimized = {false};
