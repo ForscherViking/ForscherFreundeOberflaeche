@@ -64,7 +64,8 @@ public final class FFHub {
             System.err.println("Kein Update-Schlüssel eingerichtet – automatische Updates sind deaktiviert.");
             return;
         }
-        new UpdateChecker(UpdateChecker.configuredUrl(), store, verifier, AppVersion.current())
-                .startBackground(m -> SwingUtilities.invokeLater(() -> window.showUpdateReady(m)));
+        UpdateChecker checker = new UpdateChecker(UpdateChecker.configuredUrl(), store, verifier, AppVersion.current());
+        checker.startBackground(m -> SwingUtilities.invokeLater(() -> window.showUpdateReady(m)));
+        window.setUpdateChecker(checker);
     }
 }

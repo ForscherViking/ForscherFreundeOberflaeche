@@ -92,7 +92,7 @@ Die Laptops aktualisieren sich selbst – niemand muss mehr 130 Geräte einzeln 
 
 **So funktioniert es auf dem Laptop**
 
-1. Ca. 20 s – 2 min nach dem Start (zufällig verteilt) und danach alle 4 Stunden fragt der Hub
+1. Ca. 20 s – 2 min nach dem Start (zufällig verteilt) und danach alle 30 Minuten fragt der Hub
    `releases/latest/download/update.json` dieses Repos ab. Das ist ein normaler Download-Link, kein API-Aufruf –
    es gibt also kein Abfragelimit, auch wenn alle Laptops dieselbe Internetverbindung nutzen.
 2. Ist dort eine neuere Version, wird sie im Hintergrund nach `%LOCALAPPDATA%\ForscherFreundeHub\updates`
@@ -104,7 +104,7 @@ Die Laptops aktualisieren sich selbst – niemand muss mehr 130 Geräte einzeln 
 5. **Automatischer Rollback:** Startet eine neue Version zweimal hintereinander nicht, wird sie übersprungen
    und die vorherige läuft weiter. Die installierte JAR bleibt immer als Rückfallebene erhalten.
 
-Welche Version läuft, steht oben rechts in der Kopfzeile.
+Welche Version läuft, steht oben rechts in der Kopfzeile. Ein Klick darauf sucht sofort nach Updates.
 
 **Einmalige Einrichtung** (macht ihr, nicht der Code – der private Schlüssel darf nie ins Repo):
 

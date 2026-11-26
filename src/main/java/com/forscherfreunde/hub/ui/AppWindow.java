@@ -67,6 +67,9 @@ public final class AppWindow extends JFrame {
     private final JComponent backDivider = divider();
     private final JButton updateButton = Ui.secondary("Update bereit", Icons.Type.RESTORE);
     private UpdateManifest pendingUpdate;
+    private final JLabel versionLabel = new JLabel();
+    private com.forscherfreunde.hub.update.UpdateChecker updateChecker;
+    private boolean checking;
     private boolean exiting;
 
     public AppWindow(ProfileStore store) {
@@ -243,6 +246,31 @@ public final class AppWindow extends JFrame {
 
     public void requestExit() { leave(false); }
 
+    /** Aktiviert die Prüfung per Klick auf die Versionsanzeige. */
+    public void setUpdateChecker(com.forscherfreunde.hub.update.UpdateChecker checker) {
+        this.updateChecker = checker;
+        versionLabel.setToolTipText("Klicken, um jetzt nach Updates zu suchen");
+        versionLabel.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+    }
+
+    private void checkForUpdatesNow() {
+        if (updateChecker == null || checking) return;
+        if (pendingUpdate != null) {
+            toast("Update " + pendingUpdate.version() + " ist bereit – oben rechts installieren.", Icons.Type.RESTORE, Theme.ACCENT);
+            return;
+        }
+        checking = true;
+        toast("Suche nach Updates …", Icons.Type.RESTORE, Theme.MUTED);
+        updateChecker.checkNow((outcome, error) -> javax.swing.SwingUtilities.invokeLater(() -> {
+            checking = false;
+            switch (outcome) {
+                case UP_TO_DATE -> toast("Du hast die neueste Version.");
+                case FAILED -> toast("Update-Suche fehlgeschlagen – Internetverbindung prüfen.", Icons.Type.ALERT, Theme.WARM);
+                default -> { } // showUpdateReady meldet sich selbst
+            }
+        }));
+    }
+
     /** Zeigt in der Kopfzeile an, dass ein Update heruntergeladen und geprüft wurde. */
     public void showUpdateReady(UpdateManifest m) {
         boolean first = pendingUpdate == null;
@@ -364,9 +392,14 @@ public final class AppWindow extends JFrame {
             }
         };
         right.setOpaque(false);
-        JLabel version = Ui.label("Version " + com.forscherfreunde.hub.update.AppVersion.current(),
-                Font.PLAIN, 12.5f, Theme.alpha(Theme.MUTED, 0.7f));
-        right.add(version);
+        versionLabel.setText("Version " + com.forscherfreunde.hub.update.AppVersion.current());
+        versionLabel.setFont(Theme.font(Font.PLAIN, 12.5f));
+        versionLabel.setForeground(Theme.alpha(Theme.MUTED, 0.7f));
+        versionLabel.setToolTipText("Automatische Updates sind nicht eingerichtet.");
+        versionLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) { checkForUpdatesNow(); }
+        });
+        right.add(versionLabel);
         right.add(updateButton);
         right.add(exit);
 

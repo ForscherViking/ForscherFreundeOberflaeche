@@ -14,7 +14,10 @@ import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -25,7 +28,8 @@ public final class UpdateChecker {
 
     public static final String DEFAULT_URL =
             "https://github.com/ForscherViking/ForscherFreundeOberflaeche/releases/latest/download/update.json";
-    private static final Duration INTERVAL = Duration.ofHours(4);
+    /** Zwei kleine Downloads (< 1 KB) pro Prüfung – auch bei 130 Laptops vernachlässigbar. */
+    static final Duration INTERVAL = Duration.ofMinutes(30);
 
     private final URI manifestUrl;
     private final UpdateStore store;
@@ -58,32 +62,54 @@ public final class UpdateChecker {
         return !"false".equalsIgnoreCase(System.getProperty("ffhub.updates"));
     }
 
-    /**
-     * Startet die regelmäßige Prüfung auf einem Hintergrund-Thread. Die erste Prüfung erfolgt mit
-     * zufälliger Verzögerung, damit nicht alle 130 Laptops zur selben Sekunde laden.
-     */
-    public void startBackground(Consumer<UpdateManifest> onReady) {
-        Thread t = new Thread(() -> {
-            long delay = 20_000 + ThreadLocalRandom.current().nextLong(100_000);
-            while (true) {
-                try {
-                    Thread.sleep(delay);
-                } catch (InterruptedException e) {
-                    return;
-                }
-                try {
-                    checkOnce().ifPresent(onReady);
-                } catch (IOException | GeneralSecurityException | RuntimeException e) {
-                    System.err.println("Update-Prüfung fehlgeschlagen: " + e.getMessage());
-                } catch (InterruptedException e) {
-                    return;
-                }
-                delay = INTERVAL.toMillis();
-            }
-        }, "ffhub-updater");
+    /** Ergebnis einer sofortigen Prüfung (für die Anzeige). */
+    public enum Outcome { UPDATE_READY, UP_TO_DATE, FAILED }
+
+    private final ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "ffhub-updater");
         t.setDaemon(true);
         t.setPriority(Thread.MIN_PRIORITY);
-        t.start();
+        return t;
+    });
+    private volatile Consumer<UpdateManifest> onReady = m -> { };
+
+    /**
+     * Startet die regelmäßige Prüfung auf einem Hintergrund-Thread: zuerst mit zufälliger Verzögerung
+     * (damit nicht alle Laptops zur selben Sekunde laden), danach alle 30 Minuten.
+     */
+    public void startBackground(Consumer<UpdateManifest> onReady) {
+        this.onReady = onReady;
+        long first = 20_000 + ThreadLocalRandom.current().nextLong(100_000);
+        exec.scheduleWithFixedDelay(() -> check(), first, INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    /** Prüft sofort (z. B. Klick auf die Versionsanzeige); {@code result} läuft im Hintergrund-Thread. */
+    public void checkNow(java.util.function.BiConsumer<Outcome, String> result) {
+        exec.execute(() -> {
+            Outcome o = check();
+            result.accept(o, o == Outcome.FAILED ? lastError : null);
+        });
+    }
+
+    private volatile String lastError;
+
+    private Outcome check() {
+        try {
+            Optional<UpdateManifest> m = checkOnce();
+            if (m.isPresent()) {
+                onReady.accept(m.get());
+                return Outcome.UPDATE_READY;
+            }
+            return Outcome.UP_TO_DATE;
+        } catch (IOException | GeneralSecurityException | RuntimeException e) {
+            lastError = e.getMessage();
+            System.err.println("Update-Prüfung fehlgeschlagen: " + e.getMessage());
+            return Outcome.FAILED;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            lastError = "abgebrochen";
+            return Outcome.FAILED;
+        }
     }
 
     /** Eine Prüfung: liefert das Manifest, wenn ein neueres, geprüftes Update bereitliegt. */
