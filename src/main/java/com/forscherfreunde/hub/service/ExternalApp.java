@@ -36,10 +36,15 @@ public enum ExternalApp {
 
     /** Läuft das Programm gerade (egal von wem gestartet)? Dauert einige Millisekunden → nicht auf dem Swing-Thread. */
     public boolean isRunning() {
+        return anyProcessMatches(commandMatcher);
+    }
+
+    /** Läuft (außer dem Hub selbst) ein Prozess, dessen Programmpfad {@code matcher} erfüllt? */
+    static boolean anyProcessMatches(Predicate<String> matcher) {
         long self = ProcessHandle.current().pid();
         return ProcessHandle.allProcesses()
                 .filter(p -> p.pid() != self)
-                .anyMatch(p -> p.info().command().map(commandMatcher::test).orElse(false));
+                .anyMatch(p -> p.info().command().map(matcher::test).orElse(false));
     }
 
     boolean matchesCommand(String command) { return commandMatcher.test(command); }

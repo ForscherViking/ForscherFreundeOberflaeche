@@ -1,12 +1,7 @@
 package com.forscherfreunde.hub.service;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -68,20 +63,36 @@ class AppWatcherTest {
         assertFalse(started.get());
     }
 
+    /**
+     * Prüft die echte Prozesserkennung mit einem gewöhnlichen {@code sleep}-Prozess. (Kein umbenanntes
+     * Programm: Auf neueren Linux-Systemen ist {@code sleep} ein Sammelprogramm, das unter fremdem
+     * Namen sofort endet.) Die Namensregeln für IntelliJ/Minecraft prüft {@link #recognisesProgramPaths()}.
+     */
     @Test
-    void detectsRealProcessByName(@TempDir Path dir) throws Exception {
-        Path sleep = Paths.get("/bin/sleep");
-        assumeTrue(Files.isExecutable(sleep), "nur unter Linux/macOS");
-        Path fake = dir.resolve("idea64");
-        Files.copy(sleep, fake, StandardCopyOption.COPY_ATTRIBUTES);
-        assertFalse(ExternalApp.INTELLIJ.isRunning());
-        Process p = new ProcessBuilder(fake.toString(), "30").start();
+    void detectsRunningProcess() throws Exception {
+        Process p;
         try {
-            Thread.sleep(300);
-            assertTrue(ExternalApp.INTELLIJ.isRunning(), "laufendes „IntelliJ“ wird erkannt (Einzelinstanz-Sperre)");
-        } finally {
-            p.destroyForcibly().waitFor();
+            p = new ProcessBuilder("sleep", "30").start();
+        } catch (java.io.IOException e) {
+            assumeTrue(false, "kein sleep-Programm vorhanden (z. B. Windows)");
+            return;
         }
-        assertFalse(ExternalApp.INTELLIJ.isRunning());
+        try {
+            String command = waitForCommand(p);
+            assumeTrue(command != null, "Programmpfad fremder Prozesse auf diesem System nicht lesbar");
+            assertTrue(ExternalApp.anyProcessMatches(command::equals), "laufender Prozess wird erkannt");
+            assertFalse(ExternalApp.anyProcessMatches(c -> c.endsWith("gibt-es-nicht-xyz")));
+        } finally {
+            p.destroyForcibly().waitFor(10, TimeUnit.SECONDS);
+        }
+    }
+
+    private static String waitForCommand(Process p) throws InterruptedException {
+        for (int i = 0; i < 50; i++) {
+            String c = p.toHandle().info().command().orElse(null);
+            if (c != null) return c;
+            Thread.sleep(100);
+        }
+        return null;
     }
 }
