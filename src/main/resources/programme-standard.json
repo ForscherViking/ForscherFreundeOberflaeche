@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Programme im ForscherFreunde Hub. Diese Datei darf bearbeitet werden (Pfade, Namen, welche Camps). 'pfade': erster vorhandener Pfad wird gestartet (%ProgramFiles% usw. sind erlaubt). 'ordner': Unterordner in 'Meine Dateien' des Kindes. 'camps': leer = für alle Profile, sonst Camp-IDs wie CampMinecraftMods. 'neueDatei': Hub legt eine leere Datei im Ordner des Kindes an und öffnet sie – Strg+S speichert dann automatisch dort.",
+  "_hinweis": "Programme im ForscherFreunde Hub. Diese Datei darf bearbeitet werden (Pfade, Namen, welche Camps). 'pfade': erster vorhandener Pfad wird gestartet (%ProgramFiles% usw. sind erlaubt). 'ordner': Unterordner in 'Meine Dateien' des Kindes. 'camps': leer = für alle Profile, sonst Camp-IDs wie CampMinecraftMods. 'neueDatei': Hub legt eine leere Datei im Ordner des Kindes an und öffnet sie – Strg+S speichert dann automatisch dort. 'strengeNamen': true = Dateinamen nur klein, ohne Leerzeichen (a–z, 0–9, _), passend für Minecraft-Texturen.",
   "programme": [
     {
       "id": "paintnet",
@@ -15,7 +15,8 @@
       "protokoll": "paintdotnet:",
       "prozess": "paintdotnet.exe",
       "ordner": "Bilder",
-      "neueDatei": { "name": "Bild", "endung": "png", "breite": 1280, "hoehe": 720 },
+      "neueDatei": { "name": "bild", "endung": "png", "breite": 1280, "hoehe": 720 },
+      "strengeNamen": true,
       "dateiendungen": ["png", "jpg", "jpeg", "pdn", "bmp", "gif"],
       "camps": []
     },

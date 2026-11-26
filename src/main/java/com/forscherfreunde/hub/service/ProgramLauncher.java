@@ -62,21 +62,36 @@ public final class ProgramLauncher {
         return null;
     }
 
-    /** Legt eine leere Datei nach der Vorlage des Programms im Ordner des Kindes an („Bild 1.png“, „Bild 2.png“ …). */
+    /** Nächster freier Name ohne Endung: „bild_1“, „bild_2“ … (streng) bzw. „Bild 1“ … */
+    public static String suggestNewName(Program prog, UserProfile p) {
+        Program.NeueDatei nd = prog.newFile();
+        String base = nd == null ? "datei" : nd.name();
+        String sep = prog.strictNames() ? "_" : " ";
+        if (prog.strictNames()) base = FileNames.suggestStrict(base).isEmpty() ? "bild" : FileNames.suggestStrict(base);
+        Path dir = folder(prog, p);
+        String ext = nd == null ? "" : "." + nd.endung();
+        for (int i = 1; i < 10_000; i++) {
+            String n = base + sep + i;
+            if (!Files.exists(dir.resolve(n + ext))) return n;
+        }
+        return base + sep + System.currentTimeMillis();
+    }
+
+    /** Legt eine leere Datei mit dem nächsten freien Namen an. */
     public static Path createBlankFile(Program prog, UserProfile p) throws IOException {
+        return createBlankFile(prog, p, suggestNewName(prog, p));
+    }
+
+    /** Legt eine leere Datei {@code name + Endung} im Ordner des Kindes an. */
+    public static Path createBlankFile(Program prog, UserProfile p, String name) throws IOException {
         Program.NeueDatei nd = prog.newFile();
         if (nd == null) throw new IllegalStateException("Programm hat keine Vorlage für neue Dateien");
+        String problem = FileNames.validate(name, prog.strictNames());
+        if (problem != null) throw new IOException(problem);
         Path dir = folder(prog, p);
         Files.createDirectories(dir);
-        Path file = null;
-        for (int i = 1; i < 10_000; i++) {
-            Path c = dir.resolve(nd.name() + " " + i + "." + nd.endung());
-            if (!Files.exists(c)) {
-                file = c;
-                break;
-            }
-        }
-        if (file == null) throw new IOException("Zu viele Dateien im Ordner " + dir);
+        Path file = dir.resolve(name + "." + nd.endung());
+        if (Files.exists(file)) throw new IOException("Es gibt schon eine Datei „" + file.getFileName() + "“. Bitte wähle einen anderen Namen.");
         String fmt = nd.endung().equals("jpg") || nd.endung().equals("jpeg") ? "jpg"
                 : nd.endung().equals("bmp") ? "bmp" : "png";
         if (List.of("png", "jpg", "jpeg", "bmp").contains(nd.endung())) {
@@ -170,6 +185,36 @@ public final class ProgramLauncher {
             }
         }
         return n;
+    }
+
+    /**
+     * Benennt eine Datei des Kindes um (Endung bleibt). Das Programm muss geschlossen sein, sonst würde
+     * es beim nächsten Speichern wieder unter dem alten Namen schreiben.
+     */
+    public static Path rename(Program prog, Path file, String newName) throws IOException {
+        String problem = FileNames.validate(newName, prog.strictNames());
+        if (problem != null) throw new IOException(problem);
+        if (prog.isRunning()) {
+            throw new IOException("Bitte schließe zuerst " + prog.title() + " – sonst speichert es wieder unter dem alten Namen.");
+        }
+        String ext = ext(file);
+        Path target = file.resolveSibling(ext.isEmpty() ? newName : newName + "." + ext);
+        if (target.equals(file)) return file;
+        // Nur Groß-/Kleinschreibung geändert (Windows!) → über einen Zwischennamen
+        if (Files.exists(target) && !Files.isSameFile(target, file)) {
+            throw new IOException("Es gibt schon eine Datei „" + target.getFileName() + "“.");
+        }
+        Path tmp = file.resolveSibling(".umbenennen-" + System.nanoTime());
+        Files.move(file, tmp);
+        try {
+            Files.move(tmp, target);
+        } catch (IOException e) {
+            Files.move(tmp, file);
+            throw e;
+        }
+        long[] blank = BLANKS.remove(file);
+        if (blank != null) BLANKS.put(target, blank);
+        return target;
     }
 
     /** Eine Datei des Kindes mit dem Programm, zu dem sie gehört. */

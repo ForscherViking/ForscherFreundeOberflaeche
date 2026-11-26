@@ -33,8 +33,8 @@ class ProgramLauncherTest {
         Program paint = paint();
         Path a = ProgramLauncher.createBlankFile(paint, kid);
         Path b = ProgramLauncher.createBlankFile(paint, kid);
-        assertEquals(kid.workDir().resolve("Meine Dateien").resolve("Bilder").resolve("Bild 1.png"), a);
-        assertEquals("Bild 2.png", b.getFileName().toString());
+        assertEquals(kid.workDir().resolve("Meine Dateien").resolve("Bilder").resolve("bild_1.png"), a);
+        assertEquals("bild_2.png", b.getFileName().toString());
         BufferedImage img = ImageIO.read(a.toFile());
         assertEquals(1280, img.getWidth());
         assertEquals(0xFFFFFF, img.getRGB(10, 10) & 0xFFFFFF, "weiße Leinwand");
@@ -71,6 +71,33 @@ class ProgramLauncherTest {
         assertEquals(ProgramLauncher.folder(fake, kid).toRealPath().toString(), Path.of(call[0]).toRealPath().toString(),
                 "Arbeitsordner = Ordner des Kindes");
         assertEquals(file.toString(), call[1], "die neue Datei wird geöffnet");
+    }
+
+    @Test
+    void namedBlankAndRename() throws Exception {
+        UserProfile kid = new UserProfile("Namensgeberin", Camp.MODS);
+        Program paint = paint();
+        assertTrue(paint.strictNames());
+        Path f = ProgramLauncher.createBlankFile(paint, kid, "rubin_schwert");
+        assertEquals("rubin_schwert.png", f.getFileName().toString());
+        assertThrowsMsg(() -> ProgramLauncher.createBlankFile(paint, kid, "rubin_schwert"), "schon");
+        assertThrowsMsg(() -> ProgramLauncher.createBlankFile(paint, kid, "Rubin Schwert"), "Leerzeichen");
+
+        Path renamed = ProgramLauncher.rename(paint, f, "smaragd_schwert");
+        assertEquals("smaragd_schwert.png", renamed.getFileName().toString());
+        assertFalse(Files.exists(f));
+        assertTrue(Files.exists(renamed));
+        assertThrowsMsg(() -> ProgramLauncher.rename(paint, renamed, "Smaragd"), "Kleinbuchstaben");
+
+        Path other = ProgramLauncher.createBlankFile(paint, kid, "zweites");
+        assertThrowsMsg(() -> ProgramLauncher.rename(paint, other, "smaragd_schwert"), "schon");
+        assertTrue(ProgramLauncher.cleanupUntouchedBlanks() >= 1, "umbenannte, unbemalte Vorlage wird weiterhin aufgeräumt");
+        assertFalse(Files.exists(renamed));
+    }
+
+    private static void assertThrowsMsg(org.junit.jupiter.api.function.Executable ex, String part) {
+        Exception e = org.junit.jupiter.api.Assertions.assertThrows(Exception.class, ex);
+        assertTrue(e.getMessage().contains(part), "Meldung: " + e.getMessage());
     }
 
     @Test

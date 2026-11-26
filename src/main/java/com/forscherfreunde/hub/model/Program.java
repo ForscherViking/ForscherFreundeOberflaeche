@@ -30,10 +30,11 @@ public final class Program implements WatchedProgram {
     String webAdresse;
     List<String> camps;
     Boolean einmalig;
+    Boolean strengeNamen;
 
     /** Vorlage für „Neue Datei“: eine leere Datei, die direkt im Ordner des Kindes angelegt wird. */
     public static final class NeueDatei {
-        String name = "Bild";
+        String name = "bild";
         String endung = "png";
         int breite = 1280;
         int hoehe = 720;
@@ -73,6 +74,9 @@ public final class Program implements WatchedProgram {
     public List<String> extensions() { return dateiendungen == null ? List.of() : dateiendungen; }
 
     /** Nur einmal starten, wenn es schon läuft? Programme, die eine Datei öffnen, leiten diese selbst weiter. */
+    /** Dateinamen nur klein, ohne Leerzeichen (für Minecraft-Texturen in IntelliJ)? */
+    public boolean strictNames() { return Boolean.TRUE.equals(strengeNamen); }
+
     public boolean singleInstance() { return einmalig != null ? einmalig : neueDatei == null; }
 
     public boolean isForCamp(String campId) {

@@ -5,6 +5,7 @@ import com.forscherfreunde.hub.model.ProgramCatalog;
 import com.forscherfreunde.hub.model.UserProfile;
 import com.forscherfreunde.hub.service.AppWatcher;
 import com.forscherfreunde.hub.service.Background;
+import com.forscherfreunde.hub.service.FileNames;
 import com.forscherfreunde.hub.service.Launcher;
 import com.forscherfreunde.hub.service.ProgramLauncher;
 import com.forscherfreunde.hub.ui.AppWindow;
@@ -12,6 +13,7 @@ import com.forscherfreunde.hub.ui.CardGrid;
 import com.forscherfreunde.hub.ui.HoverCard;
 import com.forscherfreunde.hub.ui.Icons;
 import com.forscherfreunde.hub.ui.Images;
+import com.forscherfreunde.hub.ui.NameDialog;
 import com.forscherfreunde.hub.ui.Screen;
 import com.forscherfreunde.hub.ui.Theme;
 import com.forscherfreunde.hub.ui.Ui;
@@ -179,6 +181,16 @@ public final class ProgramsScreen extends Screen {
 
     private void launch(Program prog, Path existingFile) {
         if (launching) return;
+        String chosenName = null;
+        if (existingFile == null && prog.newFile() != null && availability.get(prog) != ProgramLauncher.How.BROWSER) {
+            boolean image = Set.of("png", "jpg", "jpeg", "bmp").contains(prog.newFile().endung());
+            chosenName = askName(prog, image ? "Neues Bild" : "Neue Datei",
+                    image ? "Wie soll dein Bild heißen?" : "Wie soll deine Datei heißen?",
+                    ProgramLauncher.suggestNewName(prog, profile), "Erstellen", null,
+                    "." + prog.newFile().endung());
+            if (chosenName == null) return; // abgebrochen
+        }
+        final String name = chosenName;
         launching = true;
         Background.run(() -> {
             ProgramLauncher.How how = ProgramLauncher.availability(prog);
@@ -189,7 +201,8 @@ public final class ProgramsScreen extends Screen {
             }
             Path file = existingFile;
             if (file == null && prog.newFile() != null && how != ProgramLauncher.How.BROWSER) {
-                file = ProgramLauncher.createBlankFile(prog, profile);
+                file = name != null ? ProgramLauncher.createBlankFile(prog, profile, name)
+                        : ProgramLauncher.createBlankFile(prog, profile);
             }
             ProgramLauncher.open(prog, profile, file);
             return new Started(how, file, false);
@@ -200,7 +213,7 @@ public final class ProgramsScreen extends Screen {
             } else if (s.how() == ProgramLauncher.How.BROWSER) {
                 app.toast(prog.title() + " wird im Browser geöffnet.");
             } else if (s.file() != null && existingFile == null) {
-                app.toast("Neues Bild „" + s.file().getFileName() + "“ – Strg+S speichert in deinem Ordner.");
+                app.toast("„" + s.file().getFileName() + "“ ist angelegt – Strg+S speichert in deinem Ordner.");
             } else {
                 app.toast(prog.title() + " wird geöffnet …");
             }
@@ -216,6 +229,39 @@ public final class ProgramsScreen extends Screen {
             launching = false;
             app.error("Start nicht möglich", e);
         });
+    }
+
+    /** Namensdialog mit der Regel des Programms (streng: nur a–z, 0–9, _). */
+    private String askName(Program prog, String title, String text, String initial, String okText,
+                           Path currentFile, String suffix) {
+        boolean strict = prog.strictNames();
+        Path dir = currentFile != null ? currentFile.getParent() : ProgramLauncher.folder(prog, profile);
+        String rule = strict ? "Nur Kleinbuchstaben, Ziffern und _ – ohne Leerzeichen, z. B. mein_schwert"
+                : "Ohne Sonderzeichen wie / \\ : * ? \" < > |";
+        return NameDialog.ask(this, title, text, initial, suffix, rule, okText, n -> {
+            String problem = FileNames.validate(n, strict);
+            if (problem != null) return problem;
+            Path target = dir.resolve(n + suffix);
+            boolean sameFile = currentFile != null && target.toString().equalsIgnoreCase(currentFile.toString());
+            if (Files.exists(target) && !sameFile) return "Es gibt schon eine Datei mit diesem Namen.";
+            return null;
+        }, strict ? FileNames::suggestStrict : null);
+    }
+
+    private void rename(ProgramLauncher.KidFile f) {
+        Program prog = f.program();
+        String fileName = f.path().getFileName().toString();
+        int dot = fileName.lastIndexOf('.');
+        String base = dot > 0 ? fileName.substring(0, dot) : fileName;
+        String suffix = dot > 0 ? fileName.substring(dot) : "";
+        String initial = prog.strictNames() && FileNames.validate(base, true) != null ? FileNames.suggestStrict(base) : base;
+        String name = askName(prog, "Umbenennen", "Neuer Name für „" + fileName + "“:", initial, "Umbenennen",
+                f.path(), suffix);
+        if (name == null || name.equals(base)) return;
+        Background.run(() -> ProgramLauncher.rename(prog, f.path(), name), renamed -> {
+            app.toast("Umbenannt in „" + renamed.getFileName() + "“.");
+            refreshFiles();
+        }, e -> app.error("Umbenennen nicht möglich", e));
     }
 
     private static JComponent left(JComponent c) {
@@ -330,7 +376,15 @@ public final class ProgramsScreen extends Screen {
         static final int H = 150;
         private final ProgramLauncher.KidFile file;
         private final Color color;
+        private final JButton renameButton;
+        private final boolean nameProblem;
         private BufferedImage thumb;
+
+        @Override
+        public void doLayout() {
+            int h = getHeight() - 10;
+            renameButton.setBounds(getWidth() - 8 - 34, h - 38, 32, 32);
+        }
 
         FileTile(ProgramLauncher.KidFile file) {
             this.file = file;
@@ -340,6 +394,14 @@ public final class ProgramsScreen extends Screen {
             setToolTipText(name + " – mit " + file.program().title() + " öffnen");
             getAccessibleContext().setAccessibleName(name);
             setOnClick(() -> launch(file.program(), file.path()));
+            setLayout(null);
+            renameButton = Ui.iconButton(Icons.Type.EDIT, "Umbenennen", Theme.MUTED);
+            renameButton.addActionListener(e -> rename(file));
+            trackHover(renameButton);
+            add(renameButton);
+            int dot = name.lastIndexOf('.');
+            String base = dot > 0 ? name.substring(0, dot) : name;
+            nameProblem = file.program().strictNames() && FileNames.validate(base, true) != null;
             String ext = name.contains(".") ? name.substring(name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT) : "";
             if (THUMB_EXT.contains(ext)) {
                 Background.run(() -> {
@@ -384,14 +446,20 @@ public final class ProgramsScreen extends Screen {
             g2.setFont(Theme.font(Font.BOLD, 13f));
             FontMetrics fm = g2.getFontMetrics();
             g2.setColor(Theme.TEXT);
-            g2.drawString(ellipsize(name, fm, w - 20), 12, py + ph + 8 + fm.getAscent());
+            g2.drawString(ellipsize(name, fm, w - 50), 12, py + ph + 8 + fm.getAscent());
             g2.setFont(Theme.font(Font.PLAIN, 11.5f));
             FontMetrics fm2 = g2.getFontMetrics();
             g2.setColor(Theme.MUTED);
             LocalDate d = file.modified().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
             String when = d.equals(LocalDate.now()) ? "heute, " + TIME.format(file.modified().toInstant())
                     : DAY.format(file.modified().toInstant());
-            g2.drawString(file.program().title() + " · " + when, 12, py + ph + 8 + fm.getHeight() + fm2.getAscent());
+            if (nameProblem) {
+                g2.setColor(Theme.WARM);
+                g2.drawString(ellipsize("Name umbenennen!", fm2, w - 50), 12, py + ph + 8 + fm.getHeight() + fm2.getAscent());
+            } else {
+                g2.drawString(ellipsize(file.program().title() + " · " + when, fm2, w - 50), 12,
+                        py + ph + 8 + fm.getHeight() + fm2.getAscent());
+            }
             g2.dispose();
         }
     }

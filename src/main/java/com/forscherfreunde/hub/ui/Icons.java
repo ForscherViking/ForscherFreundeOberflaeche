@@ -22,7 +22,7 @@ import java.util.Map;
 public final class Icons {
 
     public enum Type {
-        PLAY, BOOK, BACK, POWER, TRASH, BACKUP, RESTORE, PLUS, CHECK, CODE, CUBE, FILE, VIDEO, FOLDER, ALERT, USER, USB, IMAGE, ROBOT, GRID
+        PLAY, BOOK, BACK, POWER, TRASH, BACKUP, RESTORE, PLUS, CHECK, CODE, CUBE, FILE, VIDEO, FOLDER, ALERT, USER, USB, IMAGE, ROBOT, GRID, EDIT
     }
 
     private record Glyph(Shape[] stroke, Shape[] fill) { }
@@ -68,6 +68,8 @@ public final class Icons {
         GLYPHS.put(Type.GRID, new Glyph(new Shape[] {new RoundRectangle2D.Double(3.5, 3.5, 7, 7, 2, 2),
                 new RoundRectangle2D.Double(13.5, 3.5, 7, 7, 2, 2), new RoundRectangle2D.Double(3.5, 13.5, 7, 7, 2, 2),
                 new RoundRectangle2D.Double(13.5, 13.5, 7, 7, 2, 2)}, new Shape[0]));
+        GLYPHS.put(Type.EDIT, new Glyph(new Shape[] {poly(true, 4, 20, 4.5, 15.5, 15.5, 4.5, 19.5, 8.5, 8.5, 19.5),
+                line(13, 7, 17, 11)}, new Shape[0]));
         GLYPHS.put(Type.USER, new Glyph(new Shape[] {new Ellipse2D.Double(8, 3.5, 8, 8),
                 new Arc2D.Double(4, 13.5, 16, 14, 0, 180, Arc2D.OPEN)}, new Shape[0]));
     }

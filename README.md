@@ -63,11 +63,16 @@ Benötigt Java 17 oder neuer (der Installer bringt Java 21 mit). `start.bat` ist
 Auf der Profilseite öffnet **„Programme“** eine Übersicht weiterer Programme. Alles, was die Kinder dort
 erstellen, landet in ihrem Profil unter `Meine Dateien\<Programm>` (z. B. `…\Mia\Meine Dateien\Bilder`).
 
-* **Paint.NET:** Ein Klick legt im Ordner des Kindes ein leeres Bild an (`Bild 1.png`, `Bild 2.png` …) und öffnet
+* **Paint.NET:** Ein Klick fragt nach dem Namen des Bildes, legt es leer im Ordner des Kindes an und öffnet
   es. **Strg+S speichert ohne Dialog genau dorthin**, „Speichern unter“ startet ebenfalls in diesem Ordner.
   Wird ein Bild nicht bemalt, räumt der Hub es nach dem Schließen wieder weg. Gestartet wird über
   `paintdotnet.exe` oder – z. B. bei der Store-Version – über das offizielle `paintdotnet:`-Protokoll.
-* **„Deine Dateien“** zeigt die zuletzt gespeicherten Bilder/Projekte mit Vorschau; ein Klick öffnet sie wieder.
+* **Dateinamen für IntelliJ:** Bei Paint.NET (`"strengeNamen": true`) sind nur Kleinbuchstaben, Ziffern und `_`
+  erlaubt, beginnend mit einem Buchstaben (z. B. `mein_schwert`) – so, wie Minecraft Texturnamen verlangt.
+  Ungültige Eingaben werden abgelehnt, ein passender Vorschlag kann per Klick übernommen werden.
+* **„Deine Dateien“** zeigt die zuletzt gespeicherten Bilder/Projekte mit Vorschau; ein Klick öffnet sie wieder,
+  der Stift benennt sie um (Programm vorher schließen). Ältere Dateien mit ungültigem Namen sind mit
+  „Name umbenennen!“ markiert.
 * Ist ein Programm nicht installiert, startet – wenn vorhanden – die Web-Version im App-Fenster von Edge/Chrome
   (mBlock: ide.mblock.cc, Blockbench: web.blockbench.net, SPIKE: spike.legoeducation.com).
 * Minimieren/Wiederöffnen und die Einzelinstanz-Sperre gelten auch hier.
